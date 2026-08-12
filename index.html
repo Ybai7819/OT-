@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OT 表生成工具 - Australia Edition</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root {
+    /* Australian flag palette */
+    --au-navy: #00247D;
+    --au-blue: #003B8F;
+    --au-red: #EF3340;
+    --au-red-dark: #C8102E;
+    --au-white: #FFFFFF;
+    --ink: #13294B;
+    --muted: #60708A;
+    --paper: #EEF4FB;
+    --panel: #FFFFFF;
+    --line: #DCE5F0;
+    --soft-blue: #F5F8FC;
+    --soft-red: #FFF4F5;
+    --ok: #16844A;
+    --warn: #B66A00;
+    --shadow: 0 8px 28px rgba(25, 55, 95, 0.08);
+    --shadow-sm: 0 3px 12px rgba(25, 55, 95, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-width: 320px;
+    background-image:
+      radial-gradient(circle at 7% 18%, rgba(0,36,125,.035) 0 2px, transparent 2.5px),
+      radial-gradient(circle at 92% 76%, rgba(239,51,64,.035) 0 2px, transparent 2.5px);
+    background-size: 72px 72px, 96px 96px;
+  }
+
+  /* ==================== HERO ==================== */
+  header.top {
+    min-height: 190px;
+    padding: 24px 42px 28px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background:
+      radial-gradient(circle at 78% 24%, rgba(255,255,255,.08), transparent 22%),
+      linear-gradient(112deg, #001A61 0%, var(--au-navy) 56%, #073A94 100%);
+    box-shadow: 0 5px 24px rgba(0, 36, 125, .18);
+  }
+
+  header.top::after {
+    content: "";
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    right: -160px;
+    top: -180px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 50%;
+    box-shadow: 0 0 0 30px rgba(255,255,255,.025), 0 0 0 70px rgba(255,255,255,.018);
+    pointer-events: none;
+  }
+
+  .brand-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    position: relative;
+    z-index: 5;
+  }
+
+  .au-flag-icon {
+    display: block;
+    width: 158px;
+    height: 99px;
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 7px 18px rgba(0,0,0,.24);
+    flex: 0 0 auto;
+  }
+
+  header.top h1 {
+    margin: 0;
+    font-size: clamp(30px, 3.4vw, 48px);
+    line-height: 1.05;
+    font-weight: 760;
+    letter-spacing: -1px;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  header.top h1 .edition {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 14px;
+    padding: 7px 13px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, #F12838, #D80D2C);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .2px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.16);
+  }
+
+  header.top .sub {
+    margin-top: 14px;
+    color: rgba(255,255,255,.92);
+    font-size: 16px;
+    font-weight: 520;
+    letter-spacing: .2px;
+  }
+
+  header.top .sub .divider { opacity: .55; padding: 0 10px; }
+  header.top .sub .accent { color: #fff; font-weight: 700; }
+
+  .hero-meta {
+    position: relative;
+    z-index: 5;
+    align-self: flex-start;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 22px;
+    background: rgba(0,0,0,.08);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .5px;
+  }
+  .hero-meta .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--au-red); box-shadow: 0 0 0 3px rgba(239,51,64,.18); }
+
+  /* Sydney / AU skyline decorative line art */
+  .au-skyline {
+    position: absolute;
+    right: 18px;
+    bottom: 4px;
+    width: 520px;
+    height: 128px;
+    opacity: .42;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .au-skyline .line {
+    position: absolute;
+    bottom: 0;
+    border: 1px solid rgba(255,255,255,.75);
+    border-bottom: 0;
+    background: linear-gradient(to top, rgba(255,255,255,.07), transparent);
+  }
+  .b1 { left: 4%; width: 26px; height: 48px; }
+  .b2 { left: 11%; width: 34px; height: 70px; }
+  .b3 { left: 20%; width: 26px; height: 88px; }
+  .b4 { left: 28%; width: 44px; height: 54px; }
+  .b5 { left: 39%; width: 24px; height: 105px; }
+  .b6 { left: 48%; width: 50px; height: 62px; }
+  .b7 { left: 60%; width: 36px; height: 80px; }
+  .b8 { left: 71%; width: 28px; height: 58px; }
+  .b9 { left: 80%; width: 54px; height: 73px; }
+  .bridge {
+    position: absolute;
+    left: 6%; right: 8%; bottom: 3px; height: 42px;
+    border-top: 2px solid rgba(255,255,255,.7);
+    border-radius: 50% 50% 0 0;
+    transform: perspective(80px) rotateX(8deg);
+  }
+  .opera {
+    position: absolute;
+    left: 4%; bottom: 0; width: 108px; height: 42px;
+  }
+  .opera span {
+    position: absolute; bottom: 0; width: 54px; height: 30px;
+    border-top: 2px solid rgba(255,255,255,.85);
+    border-radius: 100% 0 0 0;
+    transform: skewX(-20deg);
+  }
+  .opera span:nth-child(1) { left: 0; }
+  .opera span:nth-child(2) { left: 30px; height: 39px; }
+  .opera span:nth-child(3) { left: 58px; height: 26px; }
+
+  /* ==================== NAV ==================== */
+  nav.sheets {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 42px;
+    min-height: 74px;
+    background: rgba(255,255,255,.97);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 2px 10px rgba(20,50,90,.035);
+  }
+
+  nav.sheets .tab {
+    position: relative;
+    min-width: 148px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #526581;
+    font-weight: 650;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+
+  nav.sheets .tab::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-radius: 4px;
+    opacity: .82;
+  }
+  nav.sheets .tab:nth-child(2)::before { border-radius: 50%; }
+  nav.sheets .tab:nth-child(3)::before { border-radius: 3px; transform: rotate(45deg) scale(.75); }
+  nav.sheets .tab:nth-child(4)::before { border-radius: 50% 50% 3px 3px; }
+
+  nav.sheets .tab:hover { color: var(--au-blue); background: #F7F9FD; }
+  nav.sheets .tab.active { color: var(--au-red); background: #fff; font-weight: 760; }
+  nav.sheets .tab.active::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 0;
+    height: 3px;
+    background: var(--au-red);
+    border-radius: 3px 3px 0 0;
+  }
+
+  /* ==================== CONTENT ==================== */
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 22px 28px 70px;
+  }
+
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  /* First step follows the generated reference UI: left title / right operation */
+  main > .step:first-of-type {
+    display: grid;
+    grid-template-columns: minmax(270px, 30%) 1fr;
+    min-height: 190px;
+  }
+  main > .step:first-of-type .step-head {
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    background: linear-gradient(135deg, #fff 0%, #F7FAFE 100%);
+    padding: 28px 30px;
+    align-items: flex-start;
+  }
+  main > .step:first-of-type .step-body { padding: 24px 30px; }
+
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(90deg, #F7F9FD, #fff);
+  }
+
+  .step-num {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #073A94, var(--au-navy));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0,36,125,.22);
+  }
+
+  .step-head h2 { font-size: 19px; margin: 0; font-weight: 760; color: #142744; }
+  .step-head p { font-size: 12px; color: var(--muted); margin: 6px 0 0; line-height: 1.65; }
+  .step-body { padding: 24px; }
+
+  /* Upload */
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .drop {
+    border: 1.5px dashed #B7C7DC;
+    border-radius: 10px;
+    padding: 22px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s ease;
+    background: #FBFCFE;
+    position: relative;
+  }
+  .drop::before {
+    content: "↑";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 9px;
+    border-radius: 50%;
+    background: #EEF4FF;
+    color: var(--au-blue);
+    font-size: 24px;
+    font-weight: 500;
+  }
+  .drop:hover { border-color: var(--au-blue); background: #F7FAFF; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .drop.filled { border-color: var(--ok); background: #F1FAF5; border-style: solid; }
+  .drop .label { font-size: 14px; font-weight: 760; color: var(--ink); }
+  .drop .hint { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  .drop .fname { font-size: 11.5px; color: var(--ok); margin-top: 8px; font-weight: 700; word-break: break-all; }
+  .drop input { display: none; }
+
+  /* Helper cards */
+  .helper-info { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .helper-card {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 10px 13px;
+    background: var(--soft-blue);
+    font-size: 11.5px;
+    color: var(--muted);
+    flex: 1;
+    min-width: 150px;
+  }
+  .helper-card b { color: var(--ink); display: block; font-size: 12px; margin-bottom: 3px; }
+  .toggle-link { font-size: 12px; color: var(--au-blue); cursor: pointer; text-decoration: none; font-weight: 700; }
+  .toggle-link:hover { color: var(--au-red); text-decoration: underline; }
+
+  /* Step-1 sub tabs (AU-OT 表 vs 兼容表) */
+  .subtab-row { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .subtab-row .subtab {
+    border: 0; background: transparent; cursor: pointer; padding: 9px 4px 11px;
+    font-size: 13px; font-weight: 700; color: var(--muted); position: relative; margin-right: 14px;
+  }
+  .subtab-row .subtab:hover { color: var(--au-blue); }
+  .subtab-row .subtab.active { color: var(--au-red); }
+  .subtab-row .subtab.active::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--au-red); border-radius: 2px 2px 0 0;
+  }
+  .dupe-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; background: #FFE3E6; color: #A80E25; font-size: 10.5px; font-weight: 750; }
+  .override-panel { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+  .override-panel.open { display: block; }
+
+  /* Buttons */
+  button.primary {
+    background: linear-gradient(135deg, #073A94 0%, var(--au-navy) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 11px 24px;
+    font-size: 13px;
+    font-weight: 720;
+    cursor: pointer;
+    transition: all .2s ease;
+    box-shadow: 0 4px 10px rgba(0,36,125,.2);
+  }
+  button.primary:hover { background: linear-gradient(135deg, #0846AC, #001B63); box-shadow: 0 6px 15px rgba(0,36,125,.28); transform: translateY(-1px); }
+  button.primary:disabled { background: #C7D1DE; box-shadow: none; cursor: not-allowed; transform: none; }
+  button.secondary { background: #fff; border: 1px solid var(--line); color: var(--ink); border-radius: 7px; padding: 9px 18px; font-size: 13px; cursor: pointer; }
+  button.secondary:hover { border-color: var(--au-blue); color: var(--au-blue); }
+  .actions { margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .status-line { font-size: 12.5px; color: var(--muted); }
+  .status-line.ok { color: var(--ok); font-weight: 650; }
+  .status-line.err { color: #B3261E; font-weight: 650; }
+
+  /* Fields */
+  .field-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field-panel h3 { font-size: 12px; color: var(--muted); margin: 0 0 9px; font-weight: 750; letter-spacing: .2px; }
+  .field-list { min-height: 180px; border: 1.5px dashed #C7D4E4; border-radius: 10px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; background: #FBFCFE; }
+  .field-list.dragover { border-color: var(--au-blue); background: #F4F8FF; }
+  .chip { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: grab; user-select: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.04); transition: all .15s ease; }
+  .chip:hover { border-color: var(--au-blue); transform: translateY(-1px); }
+  .field-list .chip { background: #F2F6FC; border-color: #D5E0ED; color: var(--au-navy); }
+  #selected-fields .chip { background: #FFF5F6; border-color: #F5C4CA; color: #A80E25; }
+  .chip .x { color: var(--muted); font-weight: 700; cursor: pointer; padding: 0 2px; }
+  .chip .x:hover { color: #B3261E; }
+  .fixed-chip { background: #EEF2F7 !important; color: #69788F; border-color: #DCE4ED !important; cursor: default; font-size: 11.5px; }
+  .fixed-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  #column-order-list .chip { background: #fff; border-color: var(--line); }
+  #column-order-list .chip.dragging { opacity: .35; }
+  #column-order-list { min-height: 48px; }
+
+  /* Preview table */
+  table.preview { border-collapse: collapse; font-size: 11.5px; width: 100%; }
+  table.preview th, table.preview td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; white-space: nowrap; }
+  table.preview th { background: var(--au-navy); color: #fff; position: sticky; top: 0; font-weight: 700; text-align: center; }
+  table.preview tr:nth-child(even) td { background: #F8FAFD; }
+  .preview-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+
+  /* Summary */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .summary-card { border: 1px solid var(--line); border-radius: 9px; padding: 14px 16px; background: #FBFCFE; }
+  .summary-card .n { font-size: 24px; font-weight: 760; color: var(--au-navy); }
+  .summary-card .l { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+  .warn-box { border: 1px solid #F4D39B; background: #FFF9ED; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #8C5400; margin-bottom: 16px; }
+  .warn-box strong { display: block; margin-bottom: 4px; font-size: 12.5px; }
+  .warn-box ul { margin: 4px 0 0; padding-left: 18px; }
+  .assumptions { font-size: 12px; color: var(--muted); line-height: 1.8; background: #F7F9FC; border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; margin-top: 16px; }
+  .assumptions strong { color: var(--ink); }
+
+  pre.log { background: #101D35; color: #DCE7F7; font-size: 11.5px; line-height: 1.6; padding: 14px 16px; border-radius: 8px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-family: "SF Mono", Consolas, monospace; border: 1px solid #1F3357; }
+  .hidden { display: none !important; }
+
+  @media (max-width: 980px) {
+    header.top { padding: 22px 24px 26px; }
+    .au-skyline { opacity: .2; right: -130px; }
+    .hero-meta { display: none; }
+    main { padding-left: 18px; padding-right: 18px; }
+    nav.sheets { padding: 0 18px; overflow-x: auto; }
+    nav.sheets .tab { min-width: 135px; padding: 0 16px; }
+  }
+  @media (max-width: 720px) {
+    header.top { min-height: 160px; padding: 18px 16px 22px; }
+    .brand-title-wrap { gap: 14px; }
+    .au-flag-icon { width: 92px; height: 58px; }
+    header.top h1 { font-size: 27px; letter-spacing: -.5px; }
+    header.top h1 .edition { display: block; width: max-content; margin: 8px 0 0; font-size: 11px; padding: 5px 8px; }
+    header.top .sub { font-size: 12px; margin-top: 8px; }
+    .au-skyline { display: none; }
+    main > .step:first-of-type { display: block; }
+    main > .step:first-of-type .step-head { border-right: 0; border-bottom: 1px solid var(--line); }
+    .field-panels { grid-template-columns: 1fr; }
+    nav.sheets .tab { min-width: 120px; font-size: 12px; }
+  }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand-title-wrap">
+    <img class="au-flag-icon" src="data:image/png;base64,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" alt="Australian Flag">
+    <div>
+      <h1>OT 表生成工具 <span class="edition">AU PROJECT</span></h1>
+      <div class="sub"><span class="accent">Australia Edition</span><span class="divider">|</span>Data · Insight · Decisions</div>
+    </div>
+  </div>
+  <div class="hero-meta"><span class="dot"></span> AU MARKET · DATA TOOL</div>
+  <div class="au-skyline" aria-hidden="true">
+    <div class="opera"><span></span><span></span><span></span></div>
+    <div class="bridge"></div>
+    <i class="line b1"></i><i class="line b2"></i><i class="line b3"></i><i class="line b4"></i><i class="line b5"></i>
+    <i class="line b6"></i><i class="line b7"></i><i class="line b8"></i><i class="line b9"></i>
+  </div>
+</header>
+
+<nav class="sheets">
+  <div class="tab active">车型数据库</div>
+  <div class="tab" id="tab-product">产品数据库</div>
+  <div class="tab" id="tab-coverage">车型覆盖率</div>
+  <div class="tab" id="tab-invest">投资模型</div>
+</nav>
+
+<main>
+
+  <!-- STEP 1 -->
+  <section class="step">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div>
+        <h2>上传 AU-OT 表</h2>
+        <p>需包含"车型逆向"和"保有量"两个 Sheet；三张辅助表已内置，无需每次上传</p>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="subtab-row" id="step1-subtabs">
+        <button type="button" class="subtab active" id="subtab-auot">① 上传 AU-OT 表</button>
+        <button type="button" class="subtab" id="subtab-compat">② 上传兼容表（可选）</button>
+      </div>
+
+      <div id="panel-auot">
+      <div class="upload-grid" style="grid-template-columns:1fr;max-width:420px;">
+        <label class="drop" id="drop-main">
+          <div class="label">AU-OT 表</div>
+          <div class="hint">含"车型逆向"+"保有量" Sheet 的 .xlsx 文件</div>
+          <div class="fname" id="fname-main"></div>
+          <input type="file" id="file-main" accept=".xlsx">
+        </label>
+      </div>
+
+      <div class="helper-info" style="margin-top:16px;">
+        <div class="helper-card"><b>Region-Brand-Make</b><span id="hc-region"></span></div>
+        <div class="helper-card"><b>BMW-Mercedes Benz</b><span id="hc-bmw"></span></div>
+        <div class="helper-card"><b>Part Name</b><span id="hc-part"></span></div>
+      </div>
+      <span class="toggle-link" id="toggle-override">辅助表数据有更新？点此临时替换 ▸</span>
+      <div class="override-panel" id="override-panel">
+        <div class="upload-grid">
+          <label class="drop" id="drop-region">
+            <div class="label">替换 Region-Brand-Make</div>
+            <div class="fname" id="fname-region"></div>
+            <input type="file" id="file-region" accept=".xlsx">
+          </label>
+          <label class="drop" id="drop-bmw">
+            <div class="label">替换 BMW-Mercedes Benz</div>
+            <div class="fname" id="fname-bmw"></div>
+            <input type="file" id="file-bmw" accept=".xlsx">
+          </label>
+          <label class="drop" id="drop-part">
+            <div class="label">替换 Part Name</div>
+            <div class="fname" id="fname-part"></div>
+            <input type="file" id="file-part" accept=".xlsx">
+          </label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="btn-parse" disabled>解析文件</button>
+        <span class="status-line" id="parse-status"></span>
+      </div>
+      <pre class="log hidden" id="parse-log"></pre>
+      </div><!-- /panel-auot -->
+
+      <div id="panel-compat" class="hidden">
+        <div class="upload-grid" style="grid-template-columns:1fr;max-width:420px;">
+          <label class="drop" id="drop-compat">
+            <div class="label">兼容表</div>
+            <div class="hint">从第 2 行起、E 列开始按表头读取字段的 .xlsx 兼容表</div>
+            <div class="fname" id="fname-compat"></div>
+            <input type="file" id="file-compat" accept=".xlsx">
+          </label>
+        </div>
+        <div class="actions">
+          <button class="primary" id="btn-parse-compat" disabled>解析文件</button>
+          <span class="status-line" id="parse-compat-status"></span>
+        </div>
+        <pre class="log hidden" id="parse-compat-log"></pre>
+
+        <div id="compat-fields-block" class="hidden" style="margin-top:20px;">
+          <h3 style="font-size:12.5px;color:var(--muted);margin:0 0 8px;font-weight:600;">二、识别到的字段（从 E 列起）</h3>
+          <div class="fixed-row" id="compat-fields-row"></div>
+
+          <h3 style="font-size:12.5px;color:var(--muted);margin:18px 0 8px;font-weight:600;">三、聚合字段维度 — SKU / Make / Model / Series / Year 固定参与聚合，可再拖入其它字段一并作为聚合维度并保留在结果中</h3>
+          <div class="fixed-row" id="compat-fixed-fields-row"></div>
+          <div class="field-panels">
+            <div class="field-panel">
+              <h3>其余字段（拖到右侧一并参与聚合）</h3>
+              <div class="field-list" id="compat-available-fields"></div>
+            </div>
+            <div class="field-panel">
+              <h3>额外聚合维度</h3>
+              <div class="field-list" id="compat-selected-fields"></div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="btn-aggregate-compat">四、年份聚合</button>
+            <span class="status-line" id="aggregate-status"></span>
+          </div>
+        </div>
+
+        <div id="compat-preview-block" class="hidden" style="margin-top:20px;">
+          <div class="summary-grid" id="compat-summary-grid"></div>
+          <div class="preview-wrap">
+            <table class="preview" id="compat-preview-table"></table>
+          </div>
+          <div class="actions">
+            <button class="primary" id="btn-merge-compat">五、合并到车型数据库</button>
+            <span class="status-line" id="merge-status"></span>
+          </div>
+          <div class="assumptions" style="margin-top:12px;">
+            合并为可选操作，非强制：如当前已生成"车型数据库"（第 3 步），会把聚合后的行追加进去，Part Name 取自车型数据库中相同 Product Code 已有的值，并对全表自动查重（第 6 步，后台处理，无需按钮）；如尚未生成车型数据库，也可直接合并，仅生成这些 SKU 的记录。
+          </div>
+        </div>
+      </div><!-- /panel-compat -->
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step hidden" id="step2">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div>
+        <h2>选择要追加的字段（可选）</h2>
+        <p>固定字段自动生成；如需保留【车型逆向】表中的其它字段，把它拖到右侧即可追加在固定字段之后</p>
+      </div>
+    </div>
+    <div class="step-body">
+      <div style="margin-bottom:14px;">
+        <h3 style="font-size:12.5px;color:var(--muted);margin:0 0 8px;font-weight:600;">固定字段（自动生成，顺序不可更改）</h3>
+        <div class="fixed-row" id="fixed-fields-row"></div>
+      </div>
+      <div class="field-panels">
+        <div class="field-panel">
+          <h3>车型逆向表其余字段（拖到右侧追加）</h3>
+          <div class="field-list" id="available-fields"></div>
+        </div>
+        <div class="field-panel">
+          <h3>追加到车型数据库末尾的字段</h3>
+          <div class="field-list" id="selected-fields"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="btn-generate">生成车型数据库</button>
+        <span class="status-line" id="generate-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step hidden" id="step3">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <div>
+        <h2>预览与导出</h2>
+        <p>核对结果后导出为格式化的 Excel 文件</p>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="summary-grid" id="summary-grid"></div>
+      <div id="warn-container"></div>
+
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <h3 style="font-size:12.5px;color:var(--muted);margin:0;font-weight:600;">字段顺序（拖动调整，实时影响下方预览和导出）</h3>
+          <span class="toggle-link" id="btn-reset-order">恢复默认顺序</span>
+        </div>
+        <div class="field-list" id="column-order-list"></div>
+      </div>
+
+      <div class="actions" style="margin-top:0;margin-bottom:16px;">
+        <button class="primary" id="btn-export">导出 Excel</button>
+        <span class="status-line" id="export-status"></span>
+      </div>
+      <div class="preview-wrap">
+        <table class="preview" id="preview-table"></table>
+      </div>
+      <div class="assumptions" id="assumptions-box"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// 内置辅助表数据（固定内容，无需每次上传）
+const EMBEDDED_HELPER_DATA = {"region": [{"Region": "EUR", "Brand": "BMW", "Make": "BMW"}, {"Region": "US", "Brand": "Ford", "Make": "Ford"}, {"Region": "AU", "Brand": "GM", "Make": "Holden"}, {"Region": "JP", "Brand": "Honda", "Make": "Honda"}, {"Region": "KR", "Brand": "Hyundai", "Make": "Hyundai"}, {"Region": "US", "Brand": "Stellantis", "Make": "Jeep"}, {"Region": "KR", "Brand": "Hyundai", "Make": "Kia"}, {"Region": "JP", "Brand": "Mazda", "Make": "Mazda"}, {"Region": "EUR", "Brand": "Mercedes Benz", "Make": "Mercedes Benz"}, {"Region": "JP", "Brand": "Mitsubishi", "Make": "Mitsubishi"}, {"Region": "JP", "Brand": "Nissan", "Make": "Nissan"}, {"Region": "JP", "Brand": "Subaru", "Make": "Subaru"}, {"Region": "JP", "Brand": "Suzuki", "Make": "Suzuki"}, {"Region": "JP", "Brand": "Toyota", "Make": "Toyota"}, {"Region": "EUR", "Brand": "Volkswagen", "Make": "Volkswagen"}, {"Region": "EUR", "Brand": "Stellantis", "Make": "Alfa Romeo"}, {"Region": "EUR", "Brand": "Volkswagen", "Make": "Audi"}, {"Region": "US", "Brand": "Stellantis", "Make": "Chrysler"}, {"Region": "EUR", "Brand": "Stellantis", "Make": "Citroën"}, {"Region": "KR", "Brand": "GM", "Make": "Daewoo"}, {"Region": "JP", "Brand": "Toyota", "Make": "Daihatsu"}, {"Region": "US", "Brand": "Stellantis", "Make": "Dodge"}, {"Region": "EUR", "Brand": "Stellantis", "Make": "Ferrari"}, {"Region": "EUR", "Brand": "Stellantis", "Make": "Fiat"}, {"Region": "JP", "Brand": "Isuzu", "Make": "Isuzu"}, {"Region": "EUR", "Brand": "Tata Motors", "Make": "Jaguar"}, {"Region": "EUR", "Brand": "Tata Motors", "Make": "Land Rover"}, {"Region": "JP", "Brand": "Toyota", "Make": "Lexus"}, {"Region": "EUR", "Brand": "SAIC Motor", "Make": "MG"}, {"Region": "EUR", "Brand": "BMW", "Make": "Mini"}, {"Region": "EUR", "Brand": "Stellantis", "Make": "Opel"}, {"Region": "EUR", "Brand": "Stellantis", "Make": "Peugeot"}, {"Region": "EUR", "Brand": "Volkswagen", "Make": "Porsche"}, {"Region": "CN", "Brand": "Geely", "Make": "Proton"}, {"Region": "EUR", "Brand": "Renault", "Make": "Renault"}, {"Region": "EUR", "Brand": "MG", "Make": "Rover"}, {"Region": "EUR", "Brand": "GM", "Make": "Saab"}, {"Region": "EUR", "Brand": "Volkswagen", "Make": "Seat"}, {"Region": "EUR", "Brand": "Volkswagen", "Make": "Skoda"}, {"Region": "EUR", "Brand": "Geely", "Make": "Volvo"}, {"Region": "EUR", "Brand": "Tata", "Make": "Land Rover"}, {"Region": "US", "Brand": "GM", "Make": "Chevrolet"}, {"Region": "EUR", "Brand": "SAIC", "Make": "MG"}, {"Region": "EUR", "Brand": "SAIC", "Make": "LDV"}, {"Region": "CN", "Brand": "GM", "Make": "Great Wall"}, {"Region": "CN", "Brand": "BYD", "Make": "BYD"}, {"Region": "CN", "Brand": "Chery", "Make": "Chery"}, {"Region": "KR", "Brand": "KG", "Make": "Ssangyong"}, {"Region": "US", "Brand": "Tesla", "Make": "Tesla"}], "bmw": [{"Make": "BMW", "Model": "316 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "323 Ci", "Model2": "3 Series"}, {"Make": "BMW", "Model": "325 Ci", "Model2": "3 Series"}, {"Make": "BMW", "Model": "330 Ci", "Model2": "3 Series"}, {"Make": "BMW", "Model": "318 Ci", "Model2": "3 Series"}, {"Make": "BMW", "Model": "320 Ci", "Model2": "3 Series"}, {"Make": "BMW", "Model": "328 Ci", "Model2": "3 Series"}, {"Make": "BMW", "Model": "M3", "Model2": "3 Series"}, {"Make": "BMW", "Model": "318 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "320 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "323 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "325 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "328 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "330 d", "Model2": "3 Series"}, {"Make": "BMW", "Model": "330 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "316 ti", "Model2": "3 Series"}, {"Make": "BMW", "Model": "320 d", "Model2": "3 Series"}, {"Make": "BMW", "Model": "318 ti", "Model2": "3 Series"}, {"Make": "BMW", "Model": "325 ti", "Model2": "3 Series"}, {"Make": "BMW", "Model": "M3 CSL", "Model2": "3 Series"}, {"Make": "BMW", "Model": "325 d", "Model2": "3 Series"}, {"Make": "BMW", "Model": "335 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "318 d", "Model2": "3 Series"}, {"Make": "BMW", "Model": "ActiveHybrid", "Model2": "3 Series"}, {"Make": "BMW", "Model": "328 i ActiveFlex", "Model2": "3 Series"}, {"Make": "BMW", "Model": "330 e", "Model2": "3 Series"}, {"Make": "BMW", "Model": "340 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "M3 Competition", "Model2": "3 Series"}, {"Make": "BMW", "Model": "M3 CS", "Model2": "3 Series"}, {"Make": "BMW", "Model": "330 e Plug-in-Hybrid", "Model2": "3 Series"}, {"Make": "BMW", "Model": "M 340 i", "Model2": "3 Series"}, {"Make": "BMW", "Model": "320 e Plug-in-Hybrid", "Model2": "3 Series"}, {"Make": "BMW", "Model": "i", "Model2": "X5"}, {"Make": "BMW", "Model": "d", "Model2": "X5"}, {"Make": "BMW", "Model": "is", "Model2": "X5"}, {"Make": "BMW", "Model": "si", "Model2": "X5"}, {"Make": "BMW", "Model": "3.0d", "Model2": "X5"}, {"Make": "BMW", "Model": "sd", "Model2": "X5"}, {"Make": "BMW", "Model": "30d xDrive", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 30 i", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 35 d", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 48 i", "Model2": "X5"}, {"Make": "BMW", "Model": "M", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 35 i", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 40 d", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 50 i", "Model2": "X5"}, {"Make": "BMW", "Model": "M 50 d", "Model2": "X5"}, {"Make": "BMW", "Model": "sDrive 25 d", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 25 d", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 40e", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 40 i", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive M 50 d", "Model2": "X5"}, {"Make": "BMW", "Model": "M Competition", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 45 e Plug-in Hybrid", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive M50 i", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 30 d Mild-Hybrid", "Model2": "X5"}, {"Make": "BMW", "Model": "M Competition Mild Hybrid", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 40 i Mild-Hybrid", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive 50 e Plug-in-Hybrid", "Model2": "X5"}, {"Make": "BMW", "Model": "xDrive M60 i Mild-Hybrid", "Model2": "X5"}, {"Make": "BMW", "Model": "116 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "118 d", "Model2": "1 Series"}, {"Make": "BMW", "Model": "118 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "120 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "130 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "120 d", "Model2": "1 Series"}, {"Make": "BMW", "Model": "123 d", "Model2": "1 Series"}, {"Make": "BMW", "Model": "135 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "125 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "M", "Model2": "1 Series"}, {"Make": "BMW", "Model": "M 135 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "M 140 i", "Model2": "1 Series"}, {"Make": "BMW", "Model": "128 ti", "Model2": "1 Series"}, {"Make": "BMW", "Model": "118", "Model2": "1 Series"}, {"Make": "BMW", "Model": "120", "Model2": "1 Series"}, {"Make": "BMW", "Model": "M 135", "Model2": "1 Series"}, {"Make": "BMW", "Model": "220 d", "Model2": "2 Series"}, {"Make": "BMW", "Model": "220 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "M 235 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "218 d", "Model2": "2 Series"}, {"Make": "BMW", "Model": "225 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "228 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "218 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "M 240 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "M2", "Model2": "2 Series"}, {"Make": "BMW", "Model": "230 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "M2 Competition", "Model2": "2 Series"}, {"Make": "BMW", "Model": "M2 CS", "Model2": "2 Series"}, {"Make": "BMW", "Model": "225 xe Plug-in-Hybrid", "Model2": "2 Series"}, {"Make": "BMW", "Model": "M240 i", "Model2": "2 Series"}, {"Make": "BMW", "Model": "220i Mild Hybrid", "Model2": "2 Series"}, {"Make": "BMW", "Model": "223i Mild Hybrid", "Model2": "2 Series"}, {"Make": "BMW", "Model": "225e", "Model2": "2 Series"}, {"Make": "BMW", "Model": "230e", "Model2": "2 Series"}, {"Make": "BMW", "Model": "218", "Model2": "2 Series"}, {"Make": "BMW", "Model": "218 M", "Model2": "2 Series"}, {"Make": "BMW", "Model": "220", "Model2": "2 Series"}, {"Make": "BMW", "Model": "M235 xDrive", "Model2": "2 Series"}, {"Make": "BMW", "Model": "420 d", "Model2": "4 Series"}, {"Make": "BMW", "Model": "420 i", "Model2": "4 Series"}, {"Make": "BMW", "Model": "428 i", "Model2": "4 Series"}, {"Make": "BMW", "Model": "435 d", "Model2": "4 Series"}, {"Make": "BMW", "Model": "435 i", "Model2": "4 Series"}, {"Make": "BMW", "Model": "M4", "Model2": "4 Series"}, {"Make": "BMW", "Model": "430 i", "Model2": "4 Series"}, {"Make": "BMW", "Model": "440 i", "Model2": "4 Series"}, {"Make": "BMW", "Model": "M4 Competition", "Model2": "4 Series"}, {"Make": "BMW", "Model": "M4 CS", "Model2": "4 Series"}, {"Make": "BMW", "Model": "M4 GTS", "Model2": "4 Series"}, {"Make": "BMW", "Model": "M 440 i Mild-Hybrid", "Model2": "4 Series"}, {"Make": "BMW", "Model": "M440 i Mild-Hybrid", "Model2": "4 Series"}, {"Make": "BMW", "Model": "M4 CSL", "Model2": "4 Series"}, {"Make": "BMW", "Model": "520", "Model2": "5 Series"}, {"Make": "BMW", "Model": "520 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "518", "Model2": "5 Series"}, {"Make": "BMW", "Model": "525", "Model2": "5 Series"}, {"Make": "BMW", "Model": "528", "Model2": "5 Series"}, {"Make": "BMW", "Model": "520/6", "Model2": "5 Series"}, {"Make": "BMW", "Model": "528 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "525 e", "Model2": "5 Series"}, {"Make": "BMW", "Model": "525 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "M5", "Model2": "5 Series"}, {"Make": "BMW", "Model": "535 i, M 535 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "535 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "520 i 24V", "Model2": "5 Series"}, {"Make": "BMW", "Model": "525 i 24V", "Model2": "5 Series"}, {"Make": "BMW", "Model": "530 i V8", "Model2": "5 Series"}, {"Make": "BMW", "Model": "540 i V8", "Model2": "5 Series"}, {"Make": "BMW", "Model": "530 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "523 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "540 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "530 d", "Model2": "5 Series"}, {"Make": "BMW", "Model": "545 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "550 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "520 d", "Model2": "5 Series"}, {"Make": "BMW", "Model": "535 d", "Model2": "5 Series"}, {"Make": "BMW", "Model": "ActiveHybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "M5 Competition", "Model2": "5 Series"}, {"Make": "BMW", "Model": "530 e Plug-in Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "530 e Plug-in-Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "M 550 i", "Model2": "5 Series"}, {"Make": "BMW", "Model": "545 e Plug-in-Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "520 E PLUG-IN-Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "520 i Mild-Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "i5 eDrive40", "Model2": "5 Series"}, {"Make": "BMW", "Model": "i5 M60 xDrive", "Model2": "5 Series"}, {"Make": "BMW", "Model": "540 d Mild-Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "M5 Plug-in Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "M 5 Plug-in Hybrid", "Model2": "5 Series"}, {"Make": "BMW", "Model": "sDrive 18 d", "Model2": "X1"}, {"Make": "BMW", "Model": "sDrive 20 d", "Model2": "X1"}, {"Make": "BMW", "Model": "xDrive 20 d", "Model2": "X1"}, {"Make": "BMW", "Model": "xDrive 23 d", "Model2": "X1"}, {"Make": "BMW", "Model": "sDrive 18 i", "Model2": "X1"}, {"Make": "BMW", "Model": "xDrive 25 i", "Model2": "X1"}, {"Make": "BMW", "Model": "sDrive 20 i", "Model2": "X1"}, {"Make": "BMW", "Model": "xDrive 28 i", "Model2": "X1"}, {"Make": "BMW", "Model": "xDrive 20 i", "Model2": "X1"}, {"Make": "BMW", "Model": "xDrive 25 e Plug-in-Hybrid", "Model2": "X1"}, {"Make": "BMW", "Model": "iX1 xDrive 30", "Model2": "X1"}, {"Make": "BMW", "Model": "sDrive 20 i Mild-Hybrid", "Model2": "X1"}, {"Make": "BMW", "Model": "iX1 eDrive 20", "Model2": "X1"}, {"Make": "BMW", "Model": "M35i", "Model2": "X1"}, {"Make": "BMW", "Model": "xDrive M35 i", "Model2": "X1"}, {"Make": "BMW", "Model": "d", "Model2": "X3"}, {"Make": "BMW", "Model": "i", "Model2": "X3"}, {"Make": "BMW", "Model": "si", "Model2": "X3"}, {"Make": "BMW", "Model": "sd", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 20 d", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 25 i", "Model2": "X3"}, {"Make": "BMW", "Model": "30d xDrive", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 30 i", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 20 i", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 28 i", "Model2": "X3"}, {"Make": "BMW", "Model": "sDrive 20 i", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive M40 i", "Model2": "X3"}, {"Make": "BMW", "Model": "25 i", "Model2": "X3"}, {"Make": "BMW", "Model": "28 i", "Model2": "X3"}, {"Make": "BMW", "Model": "30 i", "Model2": "X3"}, {"Make": "BMW", "Model": "M Competition", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 30 e Plug-in-Hybrid", "Model2": "X3"}, {"Make": "BMW", "Model": "iX3", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 20 d Mild-Hybrid", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 30 d Mild-Hybrid", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 20", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 30 e", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive M50", "Model2": "X3"}, {"Make": "BMW", "Model": "xDrive 40 d", "Model2": "X3"}, {"Make": "Mercedes Benz", "Model": "C 180 T", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 T", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 T CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 T Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 T D", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 220 T CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 220 T D", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 230 T Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 240 T", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 250 T Turbo D", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 280 T", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 43 AMG", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 180", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 220", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 240", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 250 Turbo D", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 280", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 36 AMG", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 320", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 220 CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 230 Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 32 AMG Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 160 Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 30 CDI AMG", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 180 Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 CGI Kompressor", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 55 AMG", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 230", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 350", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 320 CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 CGI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 300", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 350 CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 230, C 250", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 63 AMG", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 250 CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 180 CGI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 250 CGI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 180 CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 250", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 350 CGI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 300 CDI", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 BlueTEC / d", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 220 BlueTEC / d", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 250 BlueTEC / d", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "AMG C 63 S", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 300 BlueTEC Hybrid / h", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 250 D", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 350 e", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "AMG C 43", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 200 EQ Boost", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 220 d", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "C 300 e", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "AMG C 63 S E Performance", "Model2": "C-Class"}, {"Make": "Mercedes Benz", "Model": "A 140", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 160", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 190", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 150", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 170", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 180 CDI", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 200", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 200 CDI", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 200 Turbo", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 180", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 180 CDI / d", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 220 CDI", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 250", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 45 AMG", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 200 CDI / d", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "AMG A 45", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "AMG A 35", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 250 e", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "AMG A 45 S", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 200 Mild-Hybrid", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "A 250 Mild-Hybrid", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "AMG A 35 Mild-Hybrid", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "AMG A 35 Mild Hybrid", "Model2": "A-Class"}, {"Make": "Mercedes Benz", "Model": "B 180 CDI", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 200", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 200 CDI", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 200 Turbo", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 180 NGT", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 180", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 220 CDI / d", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 200 Natural Gas Drive / B 200 c", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 250", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 200 CDI / d", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "B 250 e", "Model2": "B-Class"}, {"Make": "Mercedes Benz", "Model": "E 220", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 320", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 200 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 220 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 250 TD", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 250 Turbo D", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 280 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 T Turbo D", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 TD", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 320 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 200", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 280", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 D", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 Turbo D", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 36 AMG", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 36 T AMG", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 230 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 290 T Turbo D", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 420 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 230", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 200 T Kompressor", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 240 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 250 T Turbo D", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 430 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 55 T AMG", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 240", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 430", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 55 AMG", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 220 T CDI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 270 T CDI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 320 T CDI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 270 CDI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 200 Kompressor", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 500", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 55 AMG Kompressor", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 500 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 55 T AMG Kompressor", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 280 T CDI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350 T", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 280 CDI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 63 AMG", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350 CGI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 250 CDI / BlueTEC / d", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 250 CGI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 200 CDI / BlueTEC", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 200 CGI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 220 CDI / BlueTEC", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 250 CDI / BlueTEC", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 CDI / BlueTEC", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350 BlueTEC", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350 CDI", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 220 CDI / BlueTEC / d", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 220 CDI / d", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 Hybrid / BlueTEC Hybrid", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 250", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 400", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 220 d", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "AMG E 43", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350 d", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350 e", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 350 EQ Boost", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "AMG E 63", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "AMG E 63 S", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "AMG E53 EQ Boost", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 450", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "AMG E 53 EQ Boost", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 de", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 300 e", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 200 EQ Boost", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "E 53 AMG Hybrid", "Model2": "E-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 200", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 200 CDI / d", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 200 CDI", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 220 CDI", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 250", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 45 AMG", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "AMG GLA 45", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 180", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "GLA 220 d", "Model2": "GLA-Class"}, {"Make": "Mercedes Benz", "Model": "220 d", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "250", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "250 d", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "350 d", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "AMG 43", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "AMG 63 S", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "200", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "300", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "300 EQ Boost", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "200 EQ Boost", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "300 e", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "300 de", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "AMG 63S E Performance", "Model2": "GLC"}, {"Make": "Mercedes Benz", "Model": "GL 320 CDI", "Model2": "GL-Class"}, {"Make": "Mercedes Benz", "Model": "GL 450", "Model2": "GL-Class"}, {"Make": "Mercedes Benz", "Model": "GL 500", "Model2": "GL-Class"}, {"Make": "Mercedes Benz", "Model": "GL 350 CDI", "Model2": "GL-Class"}, {"Make": "Mercedes Benz", "Model": "GL 450 CDI", "Model2": "GL-Class"}, {"Make": "Mercedes Benz", "Model": "GL 350 CDI / BlueTEC", "Model2": "GL-Class"}, {"Make": "Mercedes Benz", "Model": "GL 63 AMG", "Model2": "GL-Class"}, {"Make": "Mercedes Benz", "Model": "350 d", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "450 AMG", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "AMG 63 S", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "250 d", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "400", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "500", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "500 e", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "AMG 43", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "GLE 300 d", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "GLE 400 d", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "GLE 450 EQ Boost", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "AMG GLE 53 EQ Boost", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "AMG GLE 63 S EQ Boost", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "AMG GLE 63 EQ Boost", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "GLE 350 de", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "GLE 350 e", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "GLE 450", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "GLE 450 d", "Model2": "GLE"}, {"Make": "Mercedes Benz", "Model": "220 CDI", "Model2": "GLK-Class"}, {"Make": "Mercedes Benz", "Model": "350 CDI", "Model2": "GLK-Class"}, {"Make": "Mercedes Benz", "Model": "ML 320", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 270 CDI", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 430", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 55 AMG", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 500", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 350", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 280 CDI", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 320 CDI", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 63 AMG", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 300 CDI", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 350 CDI", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 250 CDI / BlueTEC", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 350 BlueTEC", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "ML 400", "Model2": "M-Class"}, {"Make": "Mercedes Benz", "Model": "215 CDI", "Model2": "Sprinter"}], "part": [{"品类简称": "EWH", "Part Name": "Engine Wiring Harness"}, {"品类简称": "HDA", "Part Name": "Hood"}, {"品类简称": "TAG", "Part Name": "Tailgate"}, {"品类简称": "GLP", "Part Name": "Glow Plug"}, {"品类简称": "BFS", "Part Name": "Buffer Stopper"}, {"品类简称": "ACE", "Part Name": "AC Compressor Control Valve"}, {"品类简称": "CUC", "Part Name": "Clutch Cable"}, {"品类简称": "DTC", "Part Name": "Detent Cable"}, {"品类简称": "ALC", "Part Name": "Accelerator Cable"}, {"品类简称": "ALR", "Part Name": "Alternator Rectifier"}, {"品类简称": "DJS", "Part Name": "Door Jamb Switch"}, {"品类简称": "HMD", "Part Name": "Hood Molding"}, {"品类简称": "AIR", "Part Name": "Air Intake Resonator"}, {"品类简称": "AIR", "Part Name": "Air Intake Resonator"}, {"品类简称": "LMD", "Part Name": "Light Molding"}, {"品类简称": "FIT", "Part Name": "Fender Insert"}, {"品类简称": "RSC", "Part Name": "Radiator Support Cover"}, {"品类简称": "GMD", "Part Name": "Grille Molding"}, {"品类简称": "AVR", "Part Name": "Alternator Voltage Regulator"}, {"品类简称": "SMC", "Part Name": "Speedometer Cable"}, {"品类简称": "LBP", "Part Name": "Loaded Brake Backing Plate"}, {"品类简称": "DAS", "Part Name": "Drive Axle Shaft Assembly"}, {"品类简称": "AWB", "Part Name": "Auto Wheel Balancer"}, {"品类简称": "HMS", "Part Name": "Humidity Sensor"}, {"品类简称": "BTM", "Part Name": "Bumper Trim"}, {"品类简称": "BAB", "Part Name": "Bumper Absorber"}, {"品类简称": "LPB", "Part Name": "License Plate Bracket"}, {"品类简称": "FLC", "Part Name": "Fog Light Cover"}, {"品类简称": "TKC", "Part Name": "Tow Hook Cover"}, {"品类简称": "BPC", "Part Name": "Bumper Cover"}, {"品类简称": "RAK", "Part Name": "Rocker Arm"}, {"品类简称": "ODP", "Part Name": "Oil Drip Pan"}, {"品类简称": "OFC", "Part Name": "Oil Filter Cover"}, {"品类简称": "DCR", "Part Name": "Dash Cover"}, {"品类简称": "ADF", "Part Name": "Air Deflector"}, {"品类简称": "LBK", "Part Name": "Car Light Bracket"}, {"品类简称": "BRC", "Part Name": "Bumper Reinforcement"}, {"品类简称": "BBT", "Part Name": "Bumper Bracket"}, {"品类简称": "TCB", "Part Name": "Throttle Cable"}, {"品类简称": "MGS", "Part Name": "Mirror Glass"}, {"品类简称": "BKK", "Part Name": "Bracket Kit"}, {"品类简称": "PLY", "Part Name": "Pulley"}, {"品类简称": "HSK", "Part Name": "Hose Kit"}, {"品类简称": "TVV", "Part Name": "Fuel Tank Vent Valve"}, {"品类简称": "FTFC", "Part Name": "Fuel Tank Filler Cap"}, {"品类简称": "BCS", "Part Name": "Battery Current Sensor"}, {"品类简称": "CAV", "Part Name": "Engine Coolant Air Bleeder Valve"}, {"品类简称": "CSV", "Part Name": "Engine Coolant Shut Off Valve"}, {"品类简称": "SHA", "Part Name": "Shift Actuator"}, {"品类简称": "TAM", "Part Name": "Transmission Clutch Actuator Motor"}, {"品类简称": "KEA", "Part Name": "Keyless Entry Antenna"}, {"品类简称": "CLH", "Part Name": "Coolant Hose Connector"}, {"品类简称": "PSB", "Part Name": "Parking Sensor Bezel"}, {"品类简称": "SVR", "Part Name": "Sun Visor"}, {"品类简称": "ILC", "Part Name": "Ignition Lock Cylinder"}, {"品类简称": "TSB", "Part Name": "Trunk Storage Box"}, {"品类简称": "MLR", "Part Name": "Motorcycle Luggage Rack"}, {"品类简称": "STP", "Part Name": "Sealing Tape"}, {"品类简称": "AGCK", "Part Name": "Alternator Generator Conversion Kit"}, {"品类简称": "HBZ", "Part Name": "Hub bearing"}, {"品类简称": "HBZ", "Part Name": "Hub bearing"}, {"品类简称": "BRS", "Part Name": "Brake Rotor"}, {"品类简称": "BRR", "Part Name": "Brake Rotor"}, {"品类简称": "DOC", "Part Name": "Door Release Cable"}, {"品类简称": "RCF", "Part Name": "Retainer Clip Fastener"}, {"品类简称": "CMCK", "Part Name": "Clutch Master Cylinder and Clutch Slave Cylinder"}, {"品类简称": "TGC", "Part Name": "Tailgate Cable"}, {"品类简称": "TARK", "Part Name": "Tailgate Rebuild Kit"}, {"品类简称": "CUL", "Part Name": "Control Unit lights"}, {"品类简称": "DRL", "Part Name": "Daytime Running Light"}, {"品类简称": "RL", "Part Name": "Reverse Light"}, {"品类简称": "PL", "Part Name": "Position Light"}, {"品类简称": "RFL", "Part Name": "Rear Fog Light"}, {"品类简称": "FFL", "Part Name": "Front Fog Light"}, {"品类简称": "LPL", "Part Name": "Licence Plate Light"}, {"品类简称": "TRS", "Part Name": "Turn Signal Light"}, {"品类简称": "ADI", "Part Name": "Auxiliary Direction Indicator"}, {"品类简称": "TAA", "Part Name": "Taillight Assembly"}, {"品类简称": "BRL", "Part Name": "Brake Light"}, {"品类简称": "HOD", "Part Name": "Horn"}, {"品类简称": "BUR", "Part Name": "Bumper"}, {"品类简称": "ATF", "Part Name": "Automatic Transmission Filter"}, {"品类简称": "TBFS", "Part Name": "Truck Bed Floor Support"}, {"品类简称": "TMC", "Part Name": "Transmission Crossmember"}, {"品类简称": "FTC", "Part Name": "Fuel Tank Support Crossmember"}, {"品类简称": "FRK", "Part Name": "Frame Repair Kit"}, {"品类简称": "TOEH", "Part Name": "Transmission Overdrive Extension Housing"}, {"品类简称": "HCT", "Part Name": "Horn Contact"}, {"品类简称": "MHG", "Part Name": "Motorcycle Hand Guard"}, {"品类简称": "BTS", "Part Name": "Boat Trailer Step"}, {"品类简称": "BAT", "Part Name": "Battery Tray"}, {"品类简称": "OSC", "Part Name": "Oil Separator Cover"}, {"品类简称": "LSK", "Part Name": "Leaf spring kit"}, {"品类简称": "HHI", "Part Name": "Hood Hinge"}, {"品类简称": "PCM", "Part Name": "Park Assist (Pas) Camera"}, {"品类简称": "PCF", "Part Name": "Portable Car Fridge"}, {"品类简称": "FTK", "Part Name": "Fuel Tank"}, {"品类简称": "SBAR", "Part Name": "Side Bar"}, {"品类简称": "EOF", "Part Name": "Engine Oil Filter"}, {"品类简称": "RAH", "Part Name": "Rear Axle Housing"}, {"品类简称": "DRC", "Part Name": "Door Check"}, {"品类简称": "WGP", "Part Name": "Window Glass Lift Plate"}, {"品类简称": "SAH", "Part Name": "Seat Adjustment Handle"}, {"品类简称": "WFC", "Part Name": "Windshield Washer Fluid Reservoir Cap"}, {"品类简称": "FDP", "Part Name": "Fuel Vapor Leak Detection Pump"}, {"品类简称": "OBD", "Part Name": "OBD2 Code Scanner"}, {"品类简称": "CCT", "Part Name": "Catalytic Converter"}, {"品类简称": "HAV", "Part Name": "Headliner Air Vent"}, {"品类简称": "PRW", "Part Name": "Plastic Rear Window"}, {"品类简称": "CTHL", "Part Name": "Convertible Top Hydraulic Lines"}, {"品类简称": "MAK", "Part Name": "Manual 4WD Actuator Kit"}, {"品类简称": "CLS", "Part Name": "Coolant Level Sensor"}, {"品类简称": "KNS", "Part Name": "Knock Sensor"}, {"品类简称": "ACM", "Part Name": "Air Compressing Machine"}, {"品类简称": "IN", "Part Name": "Inflator"}, {"品类简称": "ACF", "Part Name": "Air Column Film"}, {"品类简称": "ABF", "Part Name": "Air Bubble Film"}, {"品类简称": "BOX", "Part Name": "Carton"}, {"品类简称": "BOX", "Part Name": "Carton"}, {"品类简称": "STB", "Part Name": "Storage Box"}, {"品类简称": "CBT", "Part Name": "Carburetor"}, {"品类简称": "HRC", "Part Name": "Hood Release Cable"}, {"品类简称": "ACK", "Part Name": "AC Compressor Clutch Kit"}, {"品类简称": "ACK", "Part Name": "AC Compressor Clutch Kit"}, {"品类简称": "MFP", "Part Name": "Mechanical Fuel Pump"}, {"品类简称": "PAS", "Part Name": "Parking Assist Sensor"}, {"品类简称": "PBM", "Part Name": "Parking Brake Module"}, {"品类简称": "SHP", "Part Name": "Servo High Performance"}, {"品类简称": "RSS", "Part Name": "Radiator Shrouds"}, {"品类简称": "FDG", "Part Name": "Oil Pump Drive Gear Shaft"}, {"品类简称": "MHP", "Part Name": "Marine Hydraulic Power Pump"}, {"品类简称": "APA", "Part Name": "Accelerator Pedal"}, {"品类简称": "DPK", "Part Name": "Disaster Prevention Bypass Kit"}, {"品类简称": "FAP", "Part Name": "Front Axle Pivot Bar"}, {"品类简称": "ATT", "Part Name": "Air Leak Test Tool"}, {"品类简称": "CBK", "Part Name": "Car Bracket"}, {"品类简称": "CPL", "Part Name": "Car Panel"}, {"品类简称": "CMC", "Part Name": "Clutch Master Cylinder"}, {"品类简称": "CSL", "Part Name": "Clutch Slave Cylinder"}, {"品类简称": "SMT", "Part Name": "Storage Mat"}, {"品类简称": "PBP", "Part Name": "Parking Brake Pedal Assembly"}, {"品类简称": "BBC", "Part Name": "Battery Box Cover"}, {"品类简称": "DBK", "Part Name": "Dual Battery Isolator Kit"}, {"品类简称": "HBC", "Part Name": "Harmonic Balancer Crankshaft Hub"}, {"品类简称": "CLK", "Part Name": "Car Clutch Kit"}, {"品类简称": "WMA", "Part Name": "Rear Window Motor Assembly"}, {"品类简称": "PTL", "Part Name": "Power Tailgate Lock"}, {"品类简称": "HDL", "Part Name": "Headlight"}, {"品类简称": "WSP", "Part Name": "Wheel Spacer"}, {"品类简称": "TSSL", "Part Name": "Transmission Shifter Linkage"}, {"品类简称": "ISA", "Part Name": "Ignition Switch Actuator"}, {"品类简称": "SCSM", "Part Name": "Steering Column Shift Mechanism"}, {"品类简称": "DSB", "Part Name": "Drive Shaft Center Support Bearing"}, {"品类简称": "FDR", "Part Name": "Fender"}, {"品类简称": "AFC", "Part Name": "Alternator Freewheel Clutch"}, {"品类简称": "HFP", "Part Name": "High Pressure Fuel Pump"}, {"品类简称": "CFK", "Part Name": "Clutch Fork Kit"}, {"品类简称": "IRK", "Part Name": "Injector Rebuild Kit"}, {"品类简称": "TBD", "Part Name": "Trunk Bed Cargo Divider"}, {"品类简称": "TCSL", "Part Name": "Transfer Case Shift Lever Kit"}, {"品类简称": "TRL", "Part Name": "Transmission Shift Lever"}, {"品类简称": "ORV", "Part Name": "Oil Pressure Relief Valve"}, {"品类简称": "WSL", "Part Name": "Weatherstrip Seal"}, {"品类简称": "TCL", "Part Name": "Transmission Cooler Lines"}, {"品类简称": "FCL", "Part Name": "Fuel Cooler"}, {"品类简称": "CHK", "Part Name": "Cab Heater Kit"}, {"品类简称": "SAR", "Part Name": "Suspension Accumulator"}, {"品类简称": "EVCK", "Part Name": "Engine Valve Covers & Ignition Coils Kits"}, {"品类简称": "FLS", "Part Name": "Fuel Level Sensor"}, {"品类简称": "BRBD", "Part Name": "Brake Rotor and Brake Drum Assembly"}, {"品类简称": "BRBP", "Part Name": "Brake Rotor and Brake Pad Assembly"}, {"品类简称": "BDSH", "Part Name": "Brake Drum and Brake Shoe Assembly"}, {"品类简称": "RLS", "Part Name": "Reverse Light Switch"}, {"品类简称": "RA", "Part Name": "Rotor Arm"}, {"品类简称": "DIC", "Part Name": "Distributor Cap"}, {"品类简称": "IDC", "Part Name": "Distributor Cap"}, {"品类简称": "ABK", "Part Name": "Axle Boot Kit"}, {"品类简称": "CBF", "Part Name": "Carburetor Flange"}, {"品类简称": "CVJ", "Part Name": "CV Joint"}, {"品类简称": "SBR", "Part Name": "Stabilizer Bar"}, {"品类简称": "DSK", "Part Name": "Drive Shaft Joint Kit"}, {"品类简称": "SADC", "Part Name": "Shock Absorber Dust Cover"}, {"品类简称": "SAB", "Part Name": "Shock Absorber Bearing"}, {"品类简称": "PSV", "Part Name": "Pressure Solenoid Valve"}, {"品类简称": "TC", "Part Name": "Tonneau Cover"}, {"品类简称": "DGC", "Part Name": "Differential Gear and Clutch Pack Kit"}, {"品类简称": "CTP", "Part Name": "Convertible Top Lift Motor Pump"}, {"品类简称": "FAK", "Part Name": "Front Axle Shaft Seal And Bearing Kit"}, {"品类简称": "PSK", "Part Name": "Power Steering Valve Cylinder Ram Hose Kit"}, {"品类简称": "AEC", "Part Name": "A"}, {"品类简称": "RSA", "Part Name": "Radiator Support Assembly"}, {"品类简称": "WDP", "Part Name": "ATV Window Panel"}, {"品类简称": "MS", "Part Name": "Motorcycle Seat"}, {"品类简称": "CTM", "Part Name": "Convertible Top Motor"}, {"品类简称": "THH", "Part Name": "Trailer Hitch"}, {"品类简称": "GTH", "Part Name": "Trailer Hitch"}, {"品类简称": "TLK", "Part Name": "Trailer Lock"}, {"品类简称": "DGS", "Part Name": "Door Gusset Assembly"}, {"品类简称": "FLA", "Part Name": "Fuel Flap Lock Actuator"}, {"品类简称": "HL", "Part Name": "Hood Latch"}, {"品类简称": "FIK", "Part Name": "Fuel Injector Kit"}, {"品类简称": "TCG", "Part Name": "Timing Chain Gear"}, {"品类简称": "TMS", "Part Name": "Transmission Shift Solenoid"}, {"品类简称": "SP", "Part Name": "Spark Plug"}, {"品类简称": "TRK", "Part Name": "Transmission Rebuild Kit"}, {"品类简称": "FLK", "Part Name": "Fuel line Kit"}, {"品类简称": "TCCM", "Part Name": "Transfer Case Control Module"}, {"品类简称": "DLPK", "Part Name": "Diesel Fuel Lift Pump Kit"}, {"品类简称": "BHH", "Part Name": "Brake Hydraulic Hose"}, {"品类简称": "BDC", "Part Name": "Rear Brake Drum Cover"}, {"品类简称": "SBC", "Part Name": "Storage Box Cover"}, {"品类简称": "WGA", "Part Name": "Wheel Gooseneck Adapter"}, {"品类简称": "SPW", "Part Name": "Spark Plug Wire"}, {"品类简称": "TOL", "Part Name": "Turbocharger Oil Line"}, {"品类简称": "EAF", "Part Name": "Engine Air Filter"}, {"品类简称": "BPR", "Part Name": "Brake Power Regulator"}, {"品类简称": "FRLK", "Part Name": "Fuel Rail Kit"}, {"品类简称": "CHH", "Part Name": "Clutch Hydraulic Hose"}, {"品类简称": "MEM", "Part Name": "Marine Exhaust Manifold"}, {"品类简称": "EGC", "Part Name": "Engine Coupler"}, {"品类简称": "OTA", "Part Name": "Outboard Oil Tank Assembly"}, {"品类简称": "FOV", "Part Name": "Fuel Tank Overfill Check Valve"}, {"品类简称": "DMS", "Part Name": "Drive Monitor Information Switch"}, {"品类简称": "RSK", "Part Name": "Remote Start Kit"}, {"品类简称": "TSK", "Part Name": "Transmission Shifter Stub Kit"}, {"品类简称": "CKT", "Part Name": "Clutch Kit"}, {"品类简称": "BSRS", "Part Name": "Blind Spot Radar Sensor"}, {"品类简称": "GSP", "Part Name": "Gauge Speedometer"}, {"品类简称": "IACK", "Part Name": "Idle Air Control Valve"}, {"品类简称": "IAC", "Part Name": "Idle Air Control Valve"}, {"品类简称": "FH", "Part Name": "Fuse Holder"}, {"品类简称": "FS", "Part Name": "Fuse"}, {"品类简称": "COV", "Part Name": "Change Over Valve"}, {"品类简称": "PLB", "Part Name": "Plastic Body"}, {"品类简称": "CSK", "Part Name": "Camshaft Kit"}, {"品类简称": "PCBG", "Part Name": "Printed Circuit Board with Gauges"}, {"品类简称": "SPS", "Part Name": "Steering Wheel Paddle Shifter"}, {"品类简称": "THS", "Part Name": "Trailer Hitch System Kit"}, {"品类简称": "SSL", "Part Name": "Seat Swivel"}, {"品类简称": "TRC", "Part Name": "Trim Control Panel"}, {"品类简称": "ADCA", "Part Name": "Axle Disconnect Cable Operated Actuator"}, {"品类简称": "HGLK", "Part Name": "High Gear Lock up Switch Kit"}, {"品类简称": "FBP", "Part Name": "Front Bumper"}, {"品类简称": "STK", "Part Name": "Start Kit"}, {"品类简称": "TDM", "Part Name": "Trunk Latch Lid Pull Down Motor"}, {"品类简称": "ASK", "Part Name": "Air Suspension Bag Kit"}, {"品类简称": "WHC", "Part Name": "Wheel Cap"}, {"品类简称": "SPLK", "Part Name": "Suspension Lift Kit"}, {"品类简称": "BHK", "Part Name": "Bellhousing Kit"}, {"品类简称": "SLK", "Part Name": "Shift Linkage Kit"}, {"品类简称": "EIM", "Part Name": "Programmable Single Fire Electronic Ignition Module"}, {"品类简称": "HTR", "Part Name": "Hard Top Rack"}, {"品类简称": "CPA", "Part Name": "Clutch Pedal Assembly"}, {"品类简称": "OIS", "Part Name": "Oil Separator"}, {"品类简称": "STS", "Part Name": "Short Throw Shifter"}, {"品类简称": "PTD", "Part Name": "Door Entry Keypad Pillar Molding Trim"}, {"品类简称": "DPT", "Part Name": "Door Entry Keypad Pillar Molding Trim"}, {"品类简称": "SSK", "Part Name": "Solenoid Service Kit"}, {"品类简称": "HIP", "Part Name": "Hood Insulation Pad"}, {"品类简称": "CLST", "Part Name": "Clutch Levers Set"}, {"品类简称": "TLL", "Part Name": "Turn Signal Light Lens"}, {"品类简称": "HBL", "Part Name": "Emergency Parking Brake Handle Lever"}, {"品类简称": "WDC", "Part Name": "Water Pump Drive Shaft Coupler"}, {"品类简称": "EPE", "Part Name": "Exhaust Pipe Expander"}, {"品类简称": "SLL", "Part Name": "Suspension Lowering Link"}, {"品类简称": "RSM", "Part Name": "RV Slide Out Motor"}, {"品类简称": "RAM", "Part Name": "RV Awning Motor"}, {"品类简称": "RSJM", "Part Name": "RV Electric Rear Stabilizer Jack Motor"}, {"品类简称": "FLW", "Part Name": "Flywheel"}, {"品类简称": "BDR", "Part Name": "Brake Drum"}, {"品类简称": "BSH", "Part Name": "Brake Shoe"}, {"品类简称": "ALT", "Part Name": "Alternator"}, {"品类简称": "STR", "Part Name": "Starter"}, {"品类简称": "BPD", "Part Name": "Brake Pad"}, {"品类简称": "ID", "Part Name": "Ignition Distributor"}, {"品类简称": "HCR", "Part Name": "Heater Core"}, {"品类简称": "HCR", "Part Name": "Heater Core"}, {"品类简称": "ARP", "Part Name": "Axle Ring And Pinion Kit"}, {"品类简称": "BPS", "Part Name": "Brake Pad Wear Sensor"}, {"品类简称": "AST", "Part Name": "Air Strut"}, {"品类简称": "AOT", "Part Name": "A"}, {"品类简称": "AAS", "Part Name": "Air Intake Manifold Runner Control Sensor"}, {"品类简称": "AIS", "Part Name": "Air Intake Manifold Actuator Control Solenoid"}, {"品类简称": "WHN", "Part Name": "Wheel Nut"}, {"品类简称": "WHS", "Part Name": "Wheel Stud"}, {"品类简称": "TPMS", "Part Name": "Tire Pressure Monitoring Sensor"}, {"品类简称": "SM", "Part Name": "Strut Mount"}, {"品类简称": "PSS", "Part Name": "Power Seat Switch"}, {"品类简称": "MIS", "Part Name": "Power Mirror Switch"}, {"品类简称": "SPP", "Part Name": "Power Steering Pump Pulley"}, {"品类简称": "FVV", "Part Name": "Fuel Vapour Valve"}, {"品类简称": "BMC", "Part Name": "Brake Master Cylinder"}, {"品类简称": "MSA", "Part Name": "Magnetic Shock Absorber"}, {"品类简称": "DCS", "Part Name": "Door Lock Cylinder Set"}, {"品类简称": "THRS", "Part Name": "Tailgate Handle Release Switch"}, {"品类简称": "ASV", "Part Name": "Air Suspension Solenoid Valve"}, {"品类简称": "ASM", "Part Name": "Air Suspension Control Module"}, {"品类简称": "FPB", "Part Name": "Fan Pulley Bracket"}, {"品类简称": "RASA", "Part Name": "Rocker Arm Shaft Lifter Assembly"}, {"品类简称": "SLA", "Part Name": "Steering Linkage Drag Link Tie Rod Assembly"}, {"品类简称": "ILH", "Part Name": "Ignition Lock Housing"}, {"品类简称": "RBS", "Part Name": "Rear Bed Step"}, {"品类简称": "SBK", "Part Name": "Stabilizer Bar Kit"}, {"品类简称": "FFH", "Part Name": "Fuel Filter Housing"}, {"品类简称": "DPB", "Part Name": "Driveshaft Parking Brake"}, {"品类简称": "PSDT", "Part Name": "Power Sliding Door Track"}, {"品类简称": "SHM", "Part Name": "Seat Hinge Motor"}, {"品类简称": "VAP", "Part Name": "Vacuum Pump"}, {"品类简称": "OLS", "Part Name": "Oil Level Sensor"}, {"品类简称": "HLP", "Part Name": "Hydralic Liftgate Pump"}, {"品类简称": "BDK", "Part Name": "Blend Door Repair Kit"}, {"品类简称": "SUSK", "Part Name": "Turbocharger"}, {"品类简称": "SUS", "Part Name": "Turbocharger"}, {"品类简称": "TBC", "Part Name": "Turbocharger"}, {"品类简称": "CVI", "Part Name": "CV Intermediate Shaft"}, {"品类简称": "AGSA", "Part Name": "Active Grille Shutter Actuator"}, {"品类简称": "ACH", "Part Name": "A"}, {"品类简称": "GBP", "Part Name": "Gearbox Pump"}, {"品类简称": "DLM", "Part Name": "Differential Lock Motor"}, {"品类简称": "ACV", "Part Name": "Secondary Air Injection Check Valve"}, {"品类简称": "CVA", "Part Name": "CV Axle Shaft"}, {"品类简称": "OIP", "Part Name": "Oil Pump"}, {"品类简称": "RSP", "Part Name": "Radiator Core Support Skid Bar Plate"}, {"品类简称": "SBE", "Part Name": "Stowable Bed Extender Kit"}, {"品类简称": "ICW", "Part Name": "Ignition Coils Kit"}, {"品类简称": "ICWK", "Part Name": "Ignition Coils Kit"}, {"品类简称": "ICK", "Part Name": "Ignition Coils Kit"}, {"品类简称": "COP", "Part Name": "Coupling Oil Pump"}, {"品类简称": "RBDA", "Part Name": "Rear Brake Drum Assembly"}, {"品类简称": "BKS", "Part Name": "Brake Shoes"}, {"品类简称": "HDB", "Part Name": "Handlebars"}, {"品类简称": "SRP", "Part Name": "Steering Rack And Pinion"}, {"品类简称": "MFT", "Part Name": "Motorcycle Fuel Tank"}, {"品类简称": "TSC", "Part Name": "Gas Tank Side Covers"}, {"品类简称": "CGK", "Part Name": "Starter Clutch Gear kit"}, {"品类简称": "CPG", "Part Name": "Clutch Primary Gear"}, {"品类简称": "RBD", "Part Name": "Rear Brake Drum"}, {"品类简称": "BWC", "Part Name": "Brake Wheel Cylinders"}, {"品类简称": "EIS", "Part Name": "Electronic Ignition System"}, {"品类简称": "SGR", "Part Name": "Stator Generator Rotor"}, {"品类简称": "CRT", "Part Name": "Cylinder Rebuild Kit"}, {"品类简称": "FPR", "Part Name": "Fuel Pressure Regulator"}, {"品类简称": "CIT", "Part Name": "Crank Installer Tool"}, {"品类简称": "CTA", "Part Name": "Chain Tensioner Adjuster"}, {"品类简称": "ECC", "Part Name": "Engine Cover Case"}, {"品类简称": "CKC", "Part Name": "Crankcase Cover"}, {"品类简称": "OCL", "Part Name": "Oil Cooler Line"}, {"品类简称": "HHA", "Part Name": "HVAC Heater Hose Assembly"}, {"品类简称": "EGRT", "Part Name": "EGR Tube"}, {"品类简称": "EOD", "Part Name": "Engine Oil Dipstick"}, {"品类简称": "EOT", "Part Name": "Engine Oil Dipstick Tube"}, {"品类简称": "TBM", "Part Name": "Trailer Brake Control Module"}, {"品类简称": "PBA", "Part Name": "Parking Brake Actuator"}, {"品类简称": "TSL", "Part Name": "Tailgate Step Light"}, {"品类简称": "BLK", "Part Name": "Bed Lighting Kit"}, {"品类简称": "CSB", "Part Name": "Center Console Safe Box"}, {"品类简称": "TRWH", "Part Name": "Trailer Wiring Harness"}, {"品类简称": "DHH", "Part Name": "Door Handle Harness"}, {"品类简称": "THK", "Part Name": "Tow Hook"}, {"品类简称": "CTB", "Part Name": "Cargo Tie Down Brackets"}, {"品类简称": "TOS", "Part Name": "Tailgate Opening Switch"}, {"品类简称": "ACB", "Part Name": "A"}, {"品类简称": "SPT", "Part Name": "Seat Panel Trim"}, {"品类简称": "DAM", "Part Name": "Door Armrest"}, {"品类简称": "DHG", "Part Name": "Door Hinge"}, {"品类简称": "CTS", "Part Name": "Convertible Top Switch"}, {"品类简称": "MFA", "Part Name": "Mirror Flag Applique"}, {"品类简称": "APT", "Part Name": "A Pillar Interior Trim Handle"}, {"品类简称": "DWS", "Part Name": "Door Lower Weatherstrip Seal"}, {"品类简称": "GBL", "Part Name": "Glove Box Handle Latch"}, {"品类简称": "SBB", "Part Name": "Seat Belt Buckle"}, {"品类简称": "SKB", "Part Name": "Shift Knob"}, {"品类简称": "SC", "Part Name": "Seat Cover"}, {"品类简称": "HMB", "Part Name": "Harmonic Balancer"}, {"品类简称": "TLG", "Part Name": "Trunk Lid Grip"}, {"品类简称": "CHC", "Part Name": "Convertible Top Hydraulic Cylinders"}, {"品类简称": "PLA", "Part Name": "Power Liftgate Actuator"}, {"品类简称": "LPS", "Part Name": "Liftgate Position Sensor"}, {"品类简称": "TCA", "Part Name": "Transfer Case Assembly"}, {"品类简称": "CLB", "Part Name": "Clutch Bellhousing"}, {"品类简称": "FAH", "Part Name": "Front Axle Housing"}, {"品类简称": "DVA", "Part Name": "Differential Vacuum Actuator"}, {"品类简称": "DL", "Part Name": "Differential Locker"}, {"品类简称": "DIF", "Part Name": "Differential"}, {"品类简称": "FOS", "Part Name": "Fog Light Switch"}, {"品类简称": "VCS", "Part Name": "Vapor Canister Vent Solenoid"}, {"品类简称": "SCA", "Part Name": "Clutch Slave Cylinder Actuator"}, {"品类简称": "SCA", "Part Name": "Clutch Slave Cylinder Actuator"}, {"品类简称": "HCV", "Part Name": "Heater Control Valve"}, {"品类简称": "HCV", "Part Name": "Heater Control Valve"}, {"品类简称": "CBVC", "Part Name": "Crankcase Ventilation Cover"}, {"品类简称": "ASCC", "Part Name": "Air Suspension Compressor Cover"}, {"品类简称": "SCS", "Part Name": "Steering Column Shaft"}, {"品类简称": "EMD", "Part Name": "Exhaust Manifold"}, {"品类简称": "PB", "Part Name": "Protection Boot"}, {"品类简称": "OHC", "Part Name": "Overflow Hose Connector"}, {"品类简称": "GPS", "Part Name": "Gear Selector Position Sensor"}, {"品类简称": "HSC", "Part Name": "Heated Seat Control Module"}, {"品类简称": "WH", "Part Name": "Wiring Harness"}, {"品类简称": "WH", "Part Name": "Wiring Harness"}, {"品类简称": "WH", "Part Name": "Wiring Harness"}, {"品类简称": "HCM", "Part Name": "Headlight control module"}, {"品类简称": "OFB", "Part Name": "Oil Filter Base"}, {"品类简称": "FAES", "Part Name": "Front Axle Engine Subframe"}, {"品类简称": "CCS", "Part Name": "Cruise Control Switch"}, {"品类简称": "BLS", "Part Name": "Brake Light Switch"}, {"品类简称": "TSS", "Part Name": "Turn Signal Switch"}, {"品类简称": "IMA", "Part Name": "Intake Manifold Flap Actuator"}, {"品类简称": "IMG", "Part Name": "Intake Manifold Seal Gasket"}, {"品类简称": "IMB", "Part Name": "Intake Manifold Repair Bracket"}, {"品类简称": "PS", "Part Name": "Pressure Sensor"}, {"品类简称": "FPS", "Part Name": "Pressure Sensor"}, {"品类简称": "TS", "Part Name": "Temperature Sensor"}, {"品类简称": "SS", "Part Name": "Speed Sensor"}, {"品类简称": "TFM", "Part Name": "Radiator Fan Cooling Motor"}, {"品类简称": "DIS", "Part Name": "Driver Information Display Switch"}, {"品类简称": "TBS", "Part Name": "Trailer Brake Control Switch"}, {"品类简称": "THB", "Part Name": "Throttle Body"}, {"品类简称": "TH", "Part Name": "Turbo Hose"}, {"品类简称": "TH", "Part Name": "Turbo Hose"}, {"品类简称": "TH", "Part Name": "Turbo Hose"}, {"品类简称": "DS", "Part Name": "Drive Shaft"}, {"品类简称": "NS", "Part Name": "Nitrogen Oxide Sensor"}, {"品类简称": "PSR", "Part Name": "Power Steering Rack"}, {"品类简称": "SRM", "Part Name": "Sunroof Motor"}, {"品类简称": "ACS", "Part Name": "Airbag Spiral Cable Clock Spring"}, {"品类简称": "CPH", "Part Name": "Cup Holder"}, {"品类简称": "FTS", "Part Name": "Fuel Tank Strap"}, {"品类简称": "OPG", "Part Name": "Engine Oil Pan Gasket"}, {"品类简称": "GPRM", "Part Name": "Glow Plug Relay Module"}, {"品类简称": "VCM", "Part Name": "Engine Voltage Converter Module"}, {"品类简称": "ADA", "Part Name": "Engine Air Duct Assembly"}, {"品类简称": "CAS", "Part Name": "Camshafts"}, {"品类简称": "EAS", "Part Name": "Camshafts"}, {"品类简称": "CAC", "Part Name": "Camshaft Adjuster Cover"}, {"品类简称": "BS", "Part Name": "Balance Shaft"}, {"品类简称": "TCK", "Part Name": "Timing Chain Kit"}, {"品类简称": "CS", "Part Name": "Coil Spring"}, {"品类简称": "ITC", "Part Name": "Intercooler"}, {"品类简称": "ITC", "Part Name": "Intercooler"}, {"品类简称": "FFP", "Part Name": "Fuel Tank Filler Neck Pipe"}, {"品类简称": "CON", "Part Name": "Condenser"}, {"品类简称": "CON", "Part Name": "Condenser"}, {"品类简称": "ETP", "Part Name": "Expansion Tank Mounting Plate"}, {"品类简称": "RFS", "Part Name": "Radiator Fan Shroud"}, {"品类简称": "TWH", "Part Name": "Transmission Wire Harness"}, {"品类简称": "PHLS", "Part Name": "Power Hatch Lift Support"}, {"品类简称": "EFH", "Part Name": "Exhaust Fluid Heater"}, {"品类简称": "EFP", "Part Name": "Emissions Fluid Pump"}, {"品类简称": "AID", "Part Name": "Air Intake Duct"}, {"品类简称": "SKA", "Part Name": "Steering Knuckle Assembly"}, {"品类简称": "WB", "Part Name": "Wiper Blade"}, {"品类简称": "KS", "Part Name": "Knuckle Steering"}, {"品类简称": "HS", "Part Name": "Headlight Switch"}, {"品类简称": "DLS", "Part Name": "Door Lock Switch"}, {"品类简称": "DLS", "Part Name": "Door Lock Switch"}, {"品类简称": "EVP", "Part Name": "Electric Vacuum Pump"}, {"品类简称": "DRS", "Part Name": "Decklid Release Switch"}, {"品类简称": "VLT", "Part Name": "Valve Lifters Tappet"}, {"品类简称": "HB", "Part Name": "Hub bearing"}, {"品类简称": "OFH", "Part Name": "Oil Filter Housing"}, {"品类简称": "OFH", "Part Name": "Oil Filter Housing"}, {"品类简称": "HWN", "Part Name": "Headlight Washer Nozzle"}, {"品类简称": "BFOPT", "Part Name": "Battery Fuse Overload Protection Trip"}, {"品类简称": "POBC", "Part Name": "Positive Battery Cable"}, {"品类简称": "WL", "Part Name": "Wiper Linkage"}, {"品类简称": "CHA", "Part Name": "Cylinder Head"}, {"品类简称": "CH", "Part Name": "Cylinder Head"}, {"品类简称": "DHO", "Part Name": "Door Handle"}, {"品类简称": "IMRC", "Part Name": "Intake Manifold Runner Control Valve"}, {"品类简称": "SDCK", "Part Name": "Power Sliding Door Cable Kit"}, {"品类简称": "STW", "Part Name": "Spare Tire Winch Carrier"}, {"品类简称": "DAV", "Part Name": "Dash Air Vent"}, {"品类简称": "WLA", "Part Name": "Wiper Linkage Assembly"}, {"品类简称": "PTB", "Part Name": "Plastic Tooling Box"}, {"品类简称": "BC", "Part Name": "Brake Caliper"}, {"品类简称": "EWP", "Part Name": "Electric Engine Water Pump"}, {"品类简称": "DC", "Part Name": "Differential Cover"}, {"品类简称": "BDS", "Part Name": "Brake Dust Shield"}, {"品类简称": "WO", "Part Name": "Water Outlet"}, {"品类简称": "THC", "Part Name": "Water Outlet"}, {"品类简称": "RBM", "Part Name": "Power Running Board Motor"}, {"品类简称": "SPC", "Part Name": "Plastic Slider"}, {"品类简称": "HVCP", "Part Name": "Air Conditional Control Panel"}, {"品类简称": "REL", "Part Name": "Relay"}, {"品类简称": "REL", "Part Name": "Relay"}, {"品类简称": "WDS", "Part Name": "4 Wheel Drive Selector Switch"}, {"品类简称": "RFM", "Part Name": "Radiator Control Fan Module"}, {"品类简称": "WCP", "Part Name": "Water Coolant Pipe"}, {"品类简称": "WCP", "Part Name": "Water Coolant Pipe"}, {"品类简称": "HLS", "Part Name": "Ride Height Level Sensor"}, {"品类简称": "CST", "Part Name": "Convertible Soft Top"}, {"品类简称": "OFA", "Part Name": "Oil Filter"}, {"品类简称": "OFA", "Part Name": "Oil Filter"}, {"品类简称": "TPA", "Part Name": "Connector Plug"}, {"品类简称": "TCP", "Part Name": "Transmission Conductor Plate"}, {"品类简称": "FIPR", "Part Name": "Fuel Injection Pressure Regulator"}, {"品类简称": "RR", "Part Name": "Roof Racks"}, {"品类简称": "TBK", "Part Name": "Timing Belt Kit"}, {"品类简称": "IF", "Part Name": "Inner Fender"}, {"品类简称": "PBC", "Part Name": "Parking Brake Cable"}, {"品类简称": "ACC", "Part Name": "AC Compressor"}, {"品类简称": "SDR", "Part Name": "Sliding Door Roller"}, {"品类简称": "AGS", "Part Name": "Active Grille Shutter"}, {"品类简称": "FIH", "Part Name": "Fuel Injector Module Wiring Harness"}, {"品类简称": "BVP", "Part Name": "Brake Vacuum Pump"}, {"品类简称": "IMRK", "Part Name": "Intake Manifold Repair Kit"}, {"品类简称": "IMRK", "Part Name": "Intake Manifold Repair Kit"}, {"品类简称": "PSP", "Part Name": "Power Steering Pump"}, {"品类简称": "TLA", "Part Name": "Tailgate Lock Actuator"}, {"品类简称": "TLA", "Part Name": "Tailgate Lock Actuator"}, {"品类简称": "CLPS", "Part Name": "Clutch Starter Safety Switch"}, {"品类简称": "AWP", "Part Name": "Auxiliary Water Pump"}, {"品类简称": "AWP", "Part Name": "Auxiliary Water Pump"}, {"品类简称": "EVC", "Part Name": "Engine Valve Cover"}, {"品类简称": "ESA", "Part Name": "Eccentric Shaft Actuator"}, {"品类简称": "PBB", "Part Name": "Power Brake Booster"}, {"品类简称": "LCM", "Part Name": "Liftgate Control Module"}, {"品类简称": "CTG", "Part Name": "Camshaft Timing Gear"}, {"品类简称": "CTG", "Part Name": "Camshaft Timing Gear"}, {"品类简称": "FIC", "Part Name": "Fuel Injection Control Module"}, {"品类简称": "LHA", "Part Name": "4WD Actuator"}, {"品类简称": "LHA", "Part Name": "4WD Actuator"}, {"品类简称": "LHA", "Part Name": "4WD Actuator"}, {"品类简称": "IM", "Part Name": "Intake Manifold"}, {"品类简称": "AIM", "Part Name": "Air Intake Manifold Flap Adjuster"}, {"品类简称": "LGH", "Part Name": "Liftgate Glass Hinge"}, {"品类简称": "OC", "Part Name": "Oil Cooler"}, {"品类简称": "CAMK", "Part Name": "Timing-Control Valve Solenoid"}, {"品类简称": "TCV", "Part Name": "Timing-Control Valve Solenoid"}, {"品类简称": "TCM", "Part Name": "Transfer Case Motor Actuator"}, {"品类简称": "TTV", "Part Name": "Transmission Throttle Valve Actuator"}, {"品类简称": "EGR", "Part Name": "EGR Valve"}, {"品类简称": "CSA", "Part Name": "Camshaft Adjuster"}, {"品类简称": "BDA", "Part Name": "Blend Door Actuator"}, {"品类简称": "FF", "Part Name": "Fender Flares"}, {"品类简称": "SKP", "Part Name": "Skid Plate"}, {"品类简称": "RB", "Part Name": "Running Board"}, {"品类简称": "FI", "Part Name": "Fuel Injector"}, {"品类简称": "ETC", "Part Name": "Timing Cover"}, {"品类简称": "VSS", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "PA", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "APPS", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "BMS", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "SH", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "GDLB", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "PDCS", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "EGTS", "Part Name": "Exhaust Gas Temperature Sensor"}, {"品类简称": "HM", "Part Name": "Headlight Motor"}, {"品类简称": "WIM", "Part Name": "Wiper Motor"}, {"品类简称": "OP", "Part Name": "Oil Pan"}, {"品类简称": "CSP", "Part Name": "Crankshaft Pulley"}, {"品类简称": "ASC", "Part Name": "Air Suspension Compressor"}, {"品类简称": "ASC", "Part Name": "Air Suspension Compressor"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "CA", "Part Name": "Control Arm Parts"}, {"品类简称": "EM", "Part Name": "Engine Mount"}, {"品类简称": "IFF", "Part Name": "Fuel Filter"}, {"品类简称": "EFF", "Part Name": "Fuel Filter"}, {"品类简称": "FFA", "Part Name": "Fuel Filter"}, {"品类简称": "WV", "Part Name": "Window Visor"}, {"品类简称": "SG", "Part Name": "Splash Guard"}, {"品类简称": "MI", "Part Name": "Mirror"}, {"品类简称": "SA", "Part Name": "Shock Absorber"}, {"品类简称": "CMPS", "Part Name": "Camshaft Position Sensor"}, {"品类简称": "FB", "Part Name": "Fan Blade"}, {"品类简称": "EBA", "Part Name": "Engine Bracket Arm"}, {"品类简称": "RAD", "Part Name": "Radiator"}, {"品类简称": "RAD", "Part Name": "Radiator"}, {"品类简称": "PSH", "Part Name": "Power Steering Hose"}, {"品类简称": "BT", "Part Name": "Belt Tensioner"}, {"品类简称": "RH", "Part Name": "Radiator Hose"}, {"品类简称": "RH", "Part Name": "Radiator Hose"}, {"品类简称": "WWP", "Part Name": "Washer Pump"}, {"品类简称": "WWS", "Part Name": "Washer Sensor"}, {"品类简称": "ECP", "Part Name": "Engine Coolant Pipe"}, {"品类简称": "OWS", "Part Name": "Crankcase Oil Separator"}, {"品类简称": "CBH", "Part Name": "Crankcase Breather Hose"}, {"品类简称": "CBH", "Part Name": "Crankcase Breather Hose"}, {"品类简称": "VCG", "Part Name": "Valve Cover Gasket"}, {"品类简称": "TBT", "Part Name": "Belt"}, {"品类简称": "SBT", "Part Name": "Belt"}, {"品类简称": "BK", "Part Name": "Belt"}, {"品类简称": "AEV", "Part Name": "A"}, {"品类简称": "EMG", "Part Name": "Exhaust Manifold Gasket"}, {"品类简称": "WFN", "Part Name": "Washer Fluid Filler Neck"}, {"品类简称": "BM", "Part Name": "Blower Motor"}, {"品类简称": "ISS", "Part Name": "Ignition Starter Switch"}, {"品类简称": "CAF", "Part Name": "Cabin Air Filter"}, {"品类简称": "WSR", "Part Name": "Windshield Washer Reservoir"}, {"品类简称": "WSR", "Part Name": "Windshield Washer Reservoir"}, {"品类简称": "FTV", "Part Name": "Crankcase Breather Valve"}, {"品类简称": "CBV", "Part Name": "Crankcase Breather Valve"}, {"品类简称": "CBV", "Part Name": "Crankcase Breather Valve"}, {"品类简称": "DARK", "Part Name": "Door Lock Actuator"}, {"品类简称": "DLA", "Part Name": "Door Lock Actuator"}, {"品类简称": "DHC", "Part Name": "Door Handle Carrier"}, {"品类简称": "AIH", "Part Name": "Air Intake Hose"}, {"品类简称": "AIH", "Part Name": "Air Intake Hose"}, {"品类简称": "AS", "Part Name": "Air Spring"}, {"品类简称": "THE", "Part Name": "Thermostat"}, {"品类简称": "THA", "Part Name": "Thermostat"}, {"品类简称": "HHS", "Part Name": "Headlight Level Sensor"}, {"品类简称": "PC", "Part Name": "Propshaft Coupling"}, {"品类简称": "WM", "Part Name": "Window Motor"}, {"品类简称": "PST", "Part Name": "Power Steering Tank"}, {"品类简称": "ABS", "Part Name": "ABS Sensor"}, {"品类简称": "TPS", "Part Name": "TPS"}, {"品类简称": "CPS", "Part Name": "Crankshaft Position Sensor"}, {"品类简称": "CLA", "Part Name": "Coupling Assembly"}, {"品类简称": "GS", "Part Name": "Gas Strut"}, {"品类简称": "GS", "Part Name": "Gas Strut"}, {"品类简称": "IC", "Part Name": "Ignition Coil"}, {"品类简称": "BMR", "Part Name": "Blower Motor Resistor"}, {"品类简称": "FC", "Part Name": "Fan Clutch"}, {"品类简称": "AFB", "Part Name": "Air Filter Box"}, {"品类简称": "MAF", "Part Name": "Air Flow Sensor"}, {"品类简称": "TF", "Part Name": "Cooling Fan"}, {"品类简称": "FP", "Part Name": "Fuel Pump"}, {"品类简称": "FP", "Part Name": "Fuel Pump"}, {"品类简称": "USC", "Part Name": "Snorkel and Accessories"}, {"品类简称": "USC", "Part Name": "Snorkel and Accessories"}, {"品类简称": "USH", "Part Name": "Snorkel and Accessories"}, {"品类简称": "SN", "Part Name": "Snorkel and Accessories"}, {"品类简称": "ET", "Part Name": "Expansion Tank"}, {"品类简称": "EPTC", "Part Name": "Expansion Tank"}, {"品类简称": "WP", "Part Name": "Water Pump"}, {"品类简称": "IS", "Part Name": "Indicator Switch"}, {"品类简称": "OS", "Part Name": "Oxygen Sensor"}, {"品类简称": "WR", "Part Name": "Window Regulator"}, {"品类简称": "WSK", "Part Name": "Window Switch"}, {"品类简称": "WS", "Part Name": "Window Switch"}, {"品类简称": "THF", "Part Name": "Transmission Holding Fixture"}, {"品类简称": "MDS", "Part Name": "Marine Drive Shaft Kit"}, {"品类简称": "FSU", "Part Name": "Fuel Sending Unit"}, {"品类简称": "VLG", "Part Name": "Valve Lifter Guides"}, {"品类简称": "FM", "Part Name": "Floor Mat"}, {"品类简称": "PSC", "Part Name": "Power Steering Cooler"}, {"品类简称": "KSW", "Part Name": "Kill Switch"}, {"品类简称": "TGK", "Part Name": "Turbocharger Gasket Kit"}]};
+</script>
+<script>
+// ============================================================
+// OT 表生成工具 — 车型数据库 · 核心逻辑
+// ============================================================
+
+const state = {
+  files: { main: null, region: null, bmw: null, part: null },
+  mainWB: null,
+  wsReverse: null,
+  wsHoldings: null,
+  headerRow1: {},
+  headerRow2: {},
+  maxCol: 0,
+  endBase: -1,
+  startSP: Infinity,
+  brandCols: [],
+  oeCols: [],
+  fixedColIdx: {},
+  extraCols: [],
+  selectedExtra: [],
+  regionMap: {},
+  bmwBenzMap: {},
+  partNameMap: {},
+  hyMap: {},
+  outputRows: [],
+  columnOrder: [],   // 最终导出/预览时的字段顺序，可在第三步拖动调整
+  warnings: { unmatchedRegion: new Set(), unmatchedHY: new Set(), unmatchedBMWBenz: new Set(), unmatchedPartName: new Set(), unmatchedCompatPartName: new Set() },
+
+  // ---- 兼容表（增量数据 + 合并）相关状态 ----
+  compatFile: null,
+  compatHeaders: [],       // [{idx, name}] 从 E 列起识别到的字段
+  compatRows: [],          // 解析出的兼容表数据行
+  compatExtraCols: [],     // 除 SKU/Make/Model/Series/Year 外，可选的其它字段
+  compatSelectedExtra: [], // 用户选中的额外聚合/保留字段
+  compatAggregatedRows: [],// 年份聚合后的结果
+  compatMerged: false,     // 是否已执行过合并
+  compatMergeExtraNames: [], // 已合并进车型数据库的额外字段名（用于维持列顺序/恢复默认顺序）
+  compatDedupeFields: [],  // 查重使用的字段（车型数据库列名，不含 Year）
+  compatMergedCount: 0,
+};
+
+const COMPAT_FIXED_FIELDS = ['SKU', 'Make', 'Model', 'Series', 'Year'];
+const DEDUPE_FIELD_NAME = '查重标记';
+
+const FIXED_FIELDS = [
+  'No','Product Code','Status','Part Name','Region','Brand','Make','Model','Series',
+  'Make Model Series Year','Note','OE No.','Factory No.','Make+Model',
+  'Model Count','Start Year','End Year','保有量'
+];
+
+const BASE_FIELD_NAMES = ['序号','SPU','Make','Model','Series','Year','Engine','发动机型号','功率','车型查重','备注'];
+const SP_FIELD_NAMES = ['YT辨识号','工厂编号','PTSKU','查重结果'];
+
+// ---------- generic helpers ----------
+function cellDisplayValue(cell) {
+  if (!cell) return '';
+  let v = cell.value;
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') {
+    if (v.richText) return v.richText.map(rt => rt.text).join('');
+    if ('result' in v) return (v.result === undefined || v.result === null) ? '' : v.result;
+    if (v instanceof Date) return v;
+    if (v.text) return v.text;
+    return '';
+  }
+  return v;
+}
+function isEmptyGeneric(v) {
+  if (v === null || v === undefined) return true;
+  const s = String(v).trim();
+  if (s === '') return true;
+  if (s.toUpperCase() === '#N/A') return true;
+  return false;
+}
+function isEmptyDash(v) {
+  if (isEmptyGeneric(v)) return true;
+  return String(v).trim() === '-';
+}
+function log(msg) {
+  const el = document.getElementById('parse-log');
+  el.classList.remove('hidden');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---------- embedded helper tables (default) ----------
+function buildHelperMapsFromRows(regionRows, bmwRows, partRows) {
+  state.regionMap = {};
+  regionRows.forEach(r => { if (r.Make && !(r.Make in state.regionMap)) state.regionMap[r.Make] = { region: r.Region, brand: r.Brand }; });
+  state.bmwBenzMap = {};
+  bmwRows.forEach(r => { if (r.Make && r.Model) state.bmwBenzMap[`${r.Make}||${r.Model}`] = r.Model2; });
+  state.partNameMap = {};
+  partRows.forEach(r => { if (r['品类简称'] !== undefined) state.partNameMap[r['品类简称']] = r['Part Name']; });
+}
+
+function initEmbeddedHelperInfo() {
+  const d = window.EMBEDDED_HELPER_DATA || { region: [], bmw: [], part: [] };
+  buildHelperMapsFromRows(d.region, d.bmw, d.part);
+  document.getElementById('hc-region').textContent = ` 内置 ${d.region.length} 条（默认使用）`;
+  document.getElementById('hc-bmw').textContent = ` 内置 ${d.bmw.length} 条（默认使用）`;
+  document.getElementById('hc-part').textContent = ` 内置 ${d.part.length} 条（默认使用）`;
+}
+initEmbeddedHelperInfo();
+
+document.getElementById('toggle-override').addEventListener('click', () => {
+  const panel = document.getElementById('override-panel');
+  panel.classList.toggle('open');
+  document.getElementById('toggle-override').textContent = panel.classList.contains('open')
+    ? '收起临时替换面板 ▾' : '辅助表数据有更新？点此临时替换 ▸';
+});
+
+// ---------- Step1 sub-tabs: AU-OT 表 / 兼容表 ----------
+document.getElementById('subtab-auot').addEventListener('click', () => {
+  document.getElementById('subtab-auot').classList.add('active');
+  document.getElementById('subtab-compat').classList.remove('active');
+  document.getElementById('panel-auot').classList.remove('hidden');
+  document.getElementById('panel-compat').classList.add('hidden');
+});
+document.getElementById('subtab-compat').addEventListener('click', () => {
+  document.getElementById('subtab-compat').classList.add('active');
+  document.getElementById('subtab-auot').classList.remove('active');
+  document.getElementById('panel-compat').classList.remove('hidden');
+  document.getElementById('panel-auot').classList.add('hidden');
+});
+
+// coming-soon tabs
+['tab-product','tab-coverage','tab-invest'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    alert('该 Sheet 暂未开放，敬请期待后续更新。');
+  });
+});
+
+// ---------- file upload wiring ----------
+function wireDropZone(dropId, fileInputId, fnameId, key) {
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(fileInputId);
+  const fname = document.getElementById(fnameId);
+  input.addEventListener('change', () => {
+    if (input.files && input.files[0]) {
+      state.files[key] = input.files[0];
+      fname.textContent = input.files[0].name;
+      drop.classList.add('filled');
+      checkReady();
+    }
+  });
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--accent)'; });
+  drop.addEventListener('dragleave', () => { drop.style.borderColor = ''; });
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.style.borderColor = '';
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      input.files = e.dataTransfer.files;
+      state.files[key] = e.dataTransfer.files[0];
+      fname.textContent = e.dataTransfer.files[0].name;
+      drop.classList.add('filled');
+      checkReady();
+    }
+  });
+}
+function checkReady() {
+  document.getElementById('btn-parse').disabled = !state.files.main;
+}
+
+wireDropZone('drop-main', 'file-main', 'fname-main', 'main');
+wireDropZone('drop-region', 'file-region', 'fname-region', 'region');
+wireDropZone('drop-bmw', 'file-bmw', 'fname-bmw', 'bmw');
+wireDropZone('drop-part', 'file-part', 'fname-part', 'part');
+
+// ---------- 兼容表 drop zone ----------
+(function wireCompatDropZone() {
+  const drop = document.getElementById('drop-compat');
+  const input = document.getElementById('file-compat');
+  const fname = document.getElementById('fname-compat');
+  const btn = document.getElementById('btn-parse-compat');
+  function setFile(f) {
+    state.compatFile = f;
+    fname.textContent = f.name;
+    drop.classList.add('filled');
+    btn.disabled = false;
+  }
+  input.addEventListener('change', () => { if (input.files && input.files[0]) setFile(input.files[0]); });
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--au-blue)'; });
+  drop.addEventListener('dragleave', () => { drop.style.borderColor = ''; });
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.style.borderColor = '';
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      input.files = e.dataTransfer.files;
+      setFile(e.dataTransfer.files[0]);
+    }
+  });
+})();
+
+// ---------- parsing ----------
+async function loadWorkbookFromFile(file) {
+  const buf = await file.arrayBuffer();
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf);
+  return wb;
+}
+
+async function loadSimpleTable(file) {
+  const wb = await loadWorkbookFromFile(file);
+  const sheet = wb.worksheets[0];
+  const headers = {};
+  const hRow = sheet.getRow(1);
+  for (let c = 1; c <= sheet.columnCount; c++) headers[c] = cellDisplayValue(hRow.getCell(c));
+  const rows = [];
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const obj = {};
+    for (let c = 1; c <= sheet.columnCount; c++) obj[headers[c]] = cellDisplayValue(row.getCell(c));
+    rows.push(obj);
+  });
+  return rows;
+}
+
+function findColByName(name) {
+  for (let c = 1; c <= state.maxCol; c++) {
+    if (String(state.headerRow2[c]).trim() === name) return c;
+  }
+  return -1;
+}
+
+document.getElementById('btn-parse').addEventListener('click', async () => {
+  const statusEl = document.getElementById('parse-status');
+  const logEl = document.getElementById('parse-log');
+  logEl.textContent = '';
+  statusEl.textContent = '解析中...';
+  statusEl.className = 'status-line';
+  try {
+    // optional override of embedded helper tables
+    if (state.files.region || state.files.bmw || state.files.part) {
+      const regionRows = state.files.region ? await loadSimpleTable(state.files.region) : window.EMBEDDED_HELPER_DATA.region;
+      const bmwRows = state.files.bmw ? await loadSimpleTable(state.files.bmw) : window.EMBEDDED_HELPER_DATA.bmw;
+      const partRows = state.files.part ? await loadSimpleTable(state.files.part) : window.EMBEDDED_HELPER_DATA.part;
+      buildHelperMapsFromRows(regionRows, bmwRows, partRows);
+      log('已使用临时替换的辅助表数据');
+    }
+
+    state.mainWB = await loadWorkbookFromFile(state.files.main);
+    const wsReverse = state.mainWB.getWorksheet('车型逆向');
+    const wsHoldings = state.mainWB.getWorksheet('保有量');
+    if (!wsReverse) throw new Error('AU-OT 表中找不到名为"车型逆向"的 Sheet');
+    if (!wsHoldings) throw new Error('AU-OT 表中找不到名为"保有量"的 Sheet');
+    state.wsReverse = wsReverse;
+    state.wsHoldings = wsHoldings;
+
+    state.maxCol = wsReverse.columnCount;
+    const row1 = wsReverse.getRow(1), row2 = wsReverse.getRow(2);
+    state.headerRow1 = {}; state.headerRow2 = {};
+    for (let c = 1; c <= state.maxCol; c++) {
+      state.headerRow1[c] = cellDisplayValue(row1.getCell(c));
+      state.headerRow2[c] = cellDisplayValue(row2.getCell(c));
+    }
+
+    const fixedIdx = {};
+    ['序号','SPU','Make','Model','Series','Year','Engine','发动机型号','功率','车型查重','备注',
+     'YT辨识号','工厂编号','PTSKU','查重结果'].forEach(n => { fixedIdx[n] = findColByName(n); });
+    state.fixedColIdx = fixedIdx;
+
+    if (fixedIdx['Make'] < 0 || fixedIdx['Model'] < 0 || fixedIdx['Series'] < 0 || fixedIdx['Year'] < 0) {
+      throw new Error('车型逆向表缺少 Make/Model/Series/Year 中的必要字段，请检查表头（第2行）');
+    }
+    if (fixedIdx['工厂编号'] < 0 && fixedIdx['PTSKU'] < 0) {
+      throw new Error('车型逆向表缺少"工厂编号"和"PTSKU"字段，无法筛选车型数据库的行');
+    }
+
+    let endBase = -1;
+    BASE_FIELD_NAMES.forEach(n => { const idx = findColByName(n); if (idx > endBase) endBase = idx; });
+    let startSP = Infinity;
+    SP_FIELD_NAMES.forEach(n => { const idx = findColByName(n); if (idx > endBase && idx < startSP) startSP = idx; });
+    if (startSP === Infinity) startSP = state.maxCol + 1;
+    state.endBase = endBase; state.startSP = startSP;
+
+    const dynamicCols = [];
+    let current = null;
+    const groupLabel = {};
+    for (let c = endBase + 1; c < startSP; c++) {
+      if (state.headerRow1[c] && String(state.headerRow1[c]).trim() !== '') current = String(state.headerRow1[c]).trim();
+      groupLabel[c] = current;
+      dynamicCols.push(c);
+    }
+    state.brandCols = dynamicCols.filter(c => groupLabel[c] && groupLabel[c].includes('品牌') && state.headerRow2[c]);
+    state.oeCols = dynamicCols.filter(c => groupLabel[c] && groupLabel[c].toUpperCase().includes('OE') && !groupLabel[c].includes('品牌'));
+
+    log(`已识别"品牌号"字段（${state.brandCols.length}个）：${state.brandCols.map(c => state.headerRow2[c]).join('、') || '无'}`);
+    log(`已识别"OE"字段（${state.oeCols.length}个）：${state.oeCols.map(c => state.headerRow2[c]).join('、') || '无'}`);
+
+    // extra/draggable columns = every named column not consumed by a fixed output field
+    // 注意：Engine 已从固定字段中移除，因此现在也作为可拖拽的额外字段出现
+    const consumed = new Set([
+      fixedIdx['序号'], fixedIdx['SPU'], fixedIdx['Make'], fixedIdx['Model'], fixedIdx['Series'],
+      fixedIdx['Year'], fixedIdx['备注'], fixedIdx['工厂编号'], fixedIdx['PTSKU'],
+      fixedIdx['查重结果'], fixedIdx['车型查重'],
+      ...state.brandCols, ...state.oeCols
+    ]);
+    state.extraCols = [];
+    for (let c = 1; c <= state.maxCol; c++) {
+      const name = state.headerRow2[c];
+      if (!name || String(name).trim() === '') continue;
+      if (consumed.has(c)) continue;
+      state.extraCols.push({ idx: c, name: String(name).trim() });
+    }
+    state.selectedExtra = [];
+
+    // 保有量 sheet
+    const hyRow1 = wsHoldings.getRow(1);
+    const hyMaxCol = wsHoldings.columnCount;
+    let colModelAU = -1;
+    const yearCols = {};
+    for (let c = 1; c <= hyMaxCol; c++) {
+      const h = cellDisplayValue(hyRow1.getCell(c));
+      if (h === 'eBay Model_AU') colModelAU = c;
+      if (typeof h === 'number' && h >= 1990 && h <= 2100) yearCols[h] = c;
+    }
+    if (colModelAU < 0) throw new Error('保有量表中找不到"eBay Model_AU"字段');
+    state.hyMap = {};
+    wsHoldings.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const modelAU = cellDisplayValue(row.getCell(colModelAU));
+      if (!modelAU) return;
+      const years = {};
+      Object.keys(yearCols).forEach(y => { years[y] = cellDisplayValue(row.getCell(yearCols[y])) || 0; });
+      if (!state.hyMap[modelAU]) state.hyMap[modelAU] = [];
+      state.hyMap[modelAU].push(years);
+    });
+    log(`保有量表：识别年份列 ${Object.keys(yearCols).length} 个（${Math.min(...Object.keys(yearCols).map(Number))}–${Math.max(...Object.keys(yearCols).map(Number))}）`);
+
+    let willInclude = 0;
+    wsReverse.eachRow((row, rowNumber) => {
+      if (rowNumber < 3) return;
+      const f = fixedIdx['工厂编号'] > 0 ? cellDisplayValue(row.getCell(fixedIdx['工厂编号'])) : '';
+      const p = fixedIdx['PTSKU'] > 0 ? cellDisplayValue(row.getCell(fixedIdx['PTSKU'])) : '';
+      if (!isEmptyGeneric(f) || !isEmptyGeneric(p)) willInclude++;
+    });
+    log(`车型逆向表总行数：${wsReverse.rowCount - 2}，其中工厂编号/PTSKU 有值的行：${willInclude}`);
+
+    statusEl.textContent = `解析完成 ✓ 共 ${willInclude} 行将进入车型数据库`;
+    statusEl.className = 'status-line ok';
+
+    renderFieldPanels();
+    document.getElementById('step2').classList.remove('hidden');
+    document.getElementById('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '解析失败：' + err.message;
+    statusEl.className = 'status-line err';
+    log('错误：' + err.message);
+  }
+});
+
+// ---------- field panels (drag & drop) ----------
+function renderFieldPanels() {
+  const fixedRow = document.getElementById('fixed-fields-row');
+  fixedRow.innerHTML = '';
+  FIXED_FIELDS.forEach(f => {
+    const chip = document.createElement('div');
+    chip.className = 'chip fixed-chip';
+    chip.textContent = f;
+    fixedRow.appendChild(chip);
+  });
+  renderAvailable();
+  renderSelected();
+}
+
+function renderAvailable() {
+  const el = document.getElementById('available-fields');
+  el.innerHTML = '';
+  state.extraCols
+    .filter(c => !state.selectedExtra.some(s => s.idx === c.idx))
+    .forEach(c => el.appendChild(makeChip(c, false)));
+  wireDropTarget(el, 'available');
+}
+function renderSelected() {
+  const el = document.getElementById('selected-fields');
+  el.innerHTML = '';
+  if (state.selectedExtra.length === 0) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:12px;color:var(--muted);padding:6px;';
+    hint.textContent = '（可选）把左侧字段拖到这里，将追加在固定字段之后';
+    el.appendChild(hint);
+  }
+  state.selectedExtra.forEach(c => el.appendChild(makeChip(c, true)));
+  wireDropTarget(el, 'selected');
+}
+
+function makeChip(col, removable) {
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.draggable = true;
+  chip.dataset.idx = col.idx;
+  const label = document.createElement('span');
+  label.textContent = col.name;
+  chip.appendChild(label);
+  if (removable) {
+    const x = document.createElement('span');
+    x.className = 'x';
+    x.textContent = '×';
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.selectedExtra = state.selectedExtra.filter(s => s.idx !== col.idx);
+      renderAvailable(); renderSelected();
+    });
+    chip.appendChild(x);
+  }
+  chip.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', String(col.idx));
+  });
+  return chip;
+}
+
+function wireDropTarget(el, zone) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('dragover');
+    const idx = Number(e.dataTransfer.getData('text/plain'));
+    if (!idx) return;
+    if (zone === 'selected') {
+      if (!state.selectedExtra.some(s => s.idx === idx)) {
+        const col = state.extraCols.find(c => c.idx === idx);
+        if (col) state.selectedExtra.push(col);
+      }
+    } else {
+      state.selectedExtra = state.selectedExtra.filter(s => s.idx !== idx);
+    }
+    renderAvailable(); renderSelected();
+  });
+}
+
+// ---------- generation ----------
+document.getElementById('btn-generate').addEventListener('click', () => {
+  const statusEl = document.getElementById('generate-status');
+  try {
+    generateOutput();
+    state.columnOrder = defaultColumnOrder();
+    statusEl.textContent = `生成完成 ✓ 共 ${state.outputRows.length} 行`;
+    statusEl.className = 'status-line ok';
+    renderResults();
+    document.getElementById('step3').classList.remove('hidden');
+    document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '生成失败：' + err.message;
+    statusEl.className = 'status-line err';
+  }
+});
+
+function generateOutput() {
+  const fx = state.fixedColIdx;
+  const ws = state.wsReverse;
+
+  state.warnings = { unmatchedRegion: new Set(), unmatchedHY: new Set(), unmatchedBMWBenz: new Set(), unmatchedPartName: new Set(), unmatchedCompatPartName: new Set() };
+  // 重新生成车型数据库时，此前的兼容表合并结果一并重置，需要的话可在第 3 步生成后重新合并
+  state.compatMerged = false;
+  state.compatMergedCount = 0;
+  state.compatDedupeFields = [];
+  state.compatMergeExtraNames = [];
+  const output = [];
+  let no = 0;
+
+  ws.eachRow((row, rowNumber) => {
+    if (rowNumber < 3) return;
+    const factoryRaw = fx['工厂编号'] > 0 ? cellDisplayValue(row.getCell(fx['工厂编号'])) : '';
+    const ptskuRaw = fx['PTSKU'] > 0 ? cellDisplayValue(row.getCell(fx['PTSKU'])) : '';
+    if (isEmptyGeneric(factoryRaw) && isEmptyGeneric(ptskuRaw)) return;
+
+    no++;
+    const make = fx['Make'] > 0 ? cellDisplayValue(row.getCell(fx['Make'])) : '';
+    const model = fx['Model'] > 0 ? cellDisplayValue(row.getCell(fx['Model'])) : '';
+    const series = fx['Series'] > 0 ? cellDisplayValue(row.getCell(fx['Series'])) : '';
+    const year = fx['Year'] > 0 ? cellDisplayValue(row.getCell(fx['Year'])) : '';
+    const noteRaw = fx['备注'] > 0 ? cellDisplayValue(row.getCell(fx['备注'])) : '';
+    const spu = fx['SPU'] > 0 ? cellDisplayValue(row.getCell(fx['SPU'])) : '';
+    const statusRaw = fx['查重结果'] > 0 ? cellDisplayValue(row.getCell(fx['查重结果'])) : '';
+
+    // Product Code (原 SKU) = PTSKU 优先，无则用工厂编号
+    const ProductCode = !isEmptyGeneric(ptskuRaw) ? String(ptskuRaw).trim() : String(factoryRaw).trim();
+    const Status = isEmptyGeneric(statusRaw) ? '' : String(statusRaw).trim();
+
+    let PartName = state.partNameMap[spu];
+    if (PartName === undefined) { PartName = spu; state.warnings.unmatchedPartName.add(spu); }
+
+    const rm = state.regionMap[make];
+    if (!rm) state.warnings.unmatchedRegion.add(make);
+    const Region = rm ? rm.region : '';
+    const Brand = rm ? rm.brand : '';
+
+    const MakeModelSeriesYear = `${make} ${model} ${series} ${year}`;
+    const Note = isEmptyGeneric(noteRaw) ? '' : String(noteRaw).trim();
+
+    const oeParts = [];
+    state.brandCols.forEach(c => {
+      const v = cellDisplayValue(row.getCell(c));
+      if (!isEmptyDash(v)) oeParts.push(`${v}(${String(state.headerRow2[c]).trim()})`);
+    });
+    state.oeCols.forEach(c => {
+      const v = cellDisplayValue(row.getCell(c));
+      if (!isEmptyDash(v)) oeParts.push(`${v}`);
+    });
+    const OENo = oeParts.join(';');
+
+    const FactoryNo = isEmptyGeneric(factoryRaw) ? '' : String(factoryRaw).trim();
+
+    let MakeModel;
+    if (make === 'BMW' || make === 'Mercedes Benz') {
+      const model2 = state.bmwBenzMap[`${make}||${model}`];
+      if (model2) { MakeModel = `${make} ${model2}`; }
+      else { MakeModel = `${make} ${model}`; state.warnings.unmatchedBMWBenz.add(`${make} ${model}`); }
+    } else {
+      MakeModel = `${make} ${model}`;
+    }
+
+    const ModelCount = 1;
+
+    const yearParts = String(year).split('-');
+    const StartYear = parseInt(yearParts[0], 10);
+    const EndYear = parseInt((yearParts[1] || yearParts[0]), 10);
+
+    let holdings = 0;
+    const matches = state.hyMap[MakeModel];
+    if (!matches) {
+      state.warnings.unmatchedHY.add(MakeModel);
+    } else if (!isNaN(StartYear) && !isNaN(EndYear)) {
+      matches.forEach(yrs => {
+        for (let y = StartYear; y <= EndYear; y++) holdings += (Number(yrs[y]) || 0);
+      });
+    }
+
+    const rowObj = {
+      'No': no, 'Product Code': ProductCode, 'Status': Status, 'Part Name': PartName,
+      'Region': Region, 'Brand': Brand, 'Make': make, 'Model': model, 'Series': series,
+      'Make Model Series Year': MakeModelSeriesYear, 'Note': Note,
+      'OE No.': OENo, 'Factory No.': FactoryNo, 'Make+Model': MakeModel,
+      'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, '保有量': holdings
+    };
+    state.selectedExtra.forEach(col => {
+      rowObj[col.name] = cellDisplayValue(row.getCell(col.idx));
+    });
+    output.push(rowObj);
+  });
+
+  state.outputRows = output;
+}
+
+// ============================================================
+// 兼容表：增量数据制作 + 与存量"车型数据库"合并
+// ============================================================
+
+// ---------- 一、二：解析兼容表，从 E 列起读取字段 ----------
+document.getElementById('btn-parse-compat').addEventListener('click', async () => {
+  const statusEl = document.getElementById('parse-compat-status');
+  const logEl = document.getElementById('parse-compat-log');
+  logEl.textContent = '';
+  logEl.classList.remove('hidden');
+  statusEl.textContent = '解析中...';
+  statusEl.className = 'status-line';
+  try {
+    const wb = await loadWorkbookFromFile(state.compatFile);
+    const sheet = wb.worksheets[0];
+    const headerRow = sheet.getRow(1);
+    const maxCol = sheet.columnCount;
+    const START_COL = 5; // E 列
+    const headers = [];
+    for (let c = START_COL; c <= maxCol; c++) {
+      const name = cellDisplayValue(headerRow.getCell(c));
+      if (name && String(name).trim() !== '') headers.push({ idx: c, name: String(name).trim() });
+    }
+    if (headers.length === 0) throw new Error('未能从 E 列起识别到任何字段，请检查表头是否在第 1 行');
+
+    const missing = COMPAT_FIXED_FIELDS.filter(n => !headers.some(h => h.name === n));
+    if (missing.length) throw new Error(`兼容表缺少必需字段：${missing.join('、')}`);
+
+    const rows = [];
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const obj = {};
+      let hasAny = false;
+      headers.forEach(h => {
+        const v = cellDisplayValue(row.getCell(h.idx));
+        obj[h.name] = v;
+        if (!isEmptyGeneric(v)) hasAny = true;
+      });
+      if (hasAny) rows.push(obj);
+    });
+
+    state.compatHeaders = headers;
+    state.compatRows = rows;
+    state.compatExtraCols = headers.filter(h => !COMPAT_FIXED_FIELDS.includes(h.name));
+    state.compatSelectedExtra = [];
+
+    log2(`已识别字段（${headers.length}个）：${headers.map(h => h.name).join('、')}`);
+    log2(`兼容表数据行数：${rows.length}`);
+    statusEl.textContent = `解析完成 ✓ 共 ${rows.length} 行`;
+    statusEl.className = 'status-line ok';
+
+    renderCompatFieldPanels();
+    document.getElementById('compat-fields-block').classList.remove('hidden');
+    document.getElementById('compat-preview-block').classList.add('hidden');
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '解析失败：' + err.message;
+    statusEl.className = 'status-line err';
+    log2('错误：' + err.message);
+  }
+
+  function log2(msg) {
+    logEl.textContent += msg + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+});
+
+// ---------- 三：字段展示 + 聚合维度选择（拖拽） ----------
+function renderCompatFieldPanels() {
+  const fieldsRow = document.getElementById('compat-fields-row');
+  fieldsRow.innerHTML = '';
+  state.compatHeaders.forEach(h => {
+    const chip = document.createElement('div');
+    chip.className = 'chip fixed-chip';
+    chip.textContent = h.name;
+    fieldsRow.appendChild(chip);
+  });
+
+  const fixedRow = document.getElementById('compat-fixed-fields-row');
+  fixedRow.innerHTML = '';
+  COMPAT_FIXED_FIELDS.forEach(f => {
+    const chip = document.createElement('div');
+    chip.className = 'chip fixed-chip';
+    chip.textContent = f;
+    fixedRow.appendChild(chip);
+  });
+
+  renderCompatAvailable();
+  renderCompatSelected();
+}
+
+function renderCompatAvailable() {
+  const el = document.getElementById('compat-available-fields');
+  el.innerHTML = '';
+  state.compatExtraCols
+    .filter(c => !state.compatSelectedExtra.some(s => s.idx === c.idx))
+    .forEach(c => el.appendChild(makeCompatChip(c, false)));
+  wireCompatDropTarget(el, 'available');
+}
+function renderCompatSelected() {
+  const el = document.getElementById('compat-selected-fields');
+  el.innerHTML = '';
+  if (state.compatSelectedExtra.length === 0) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:12px;color:var(--muted);padding:6px;';
+    hint.textContent = '（可选）把左侧字段拖到这里，一并作为聚合维度并保留在结果中';
+    el.appendChild(hint);
+  }
+  state.compatSelectedExtra.forEach(c => el.appendChild(makeCompatChip(c, true)));
+  wireCompatDropTarget(el, 'selected');
+}
+function makeCompatChip(col, removable) {
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.draggable = true;
+  chip.dataset.idx = col.idx;
+  const label = document.createElement('span');
+  label.textContent = col.name;
+  chip.appendChild(label);
+  if (removable) {
+    const x = document.createElement('span');
+    x.className = 'x';
+    x.textContent = '×';
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.compatSelectedExtra = state.compatSelectedExtra.filter(s => s.idx !== col.idx);
+      renderCompatAvailable(); renderCompatSelected();
+    });
+    chip.appendChild(x);
+  }
+  chip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', String(col.idx)); });
+  return chip;
+}
+function wireCompatDropTarget(el, zone) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('dragover');
+    const idx = Number(e.dataTransfer.getData('text/plain'));
+    if (!idx) return;
+    if (zone === 'selected') {
+      if (!state.compatSelectedExtra.some(s => s.idx === idx)) {
+        const col = state.compatExtraCols.find(c => c.idx === idx);
+        if (col) state.compatSelectedExtra.push(col);
+      }
+    } else {
+      state.compatSelectedExtra = state.compatSelectedExtra.filter(s => s.idx !== idx);
+    }
+    renderCompatAvailable(); renderCompatSelected();
+  });
+}
+
+// ---------- 四：年份聚合 ----------
+function mergeYearsToRanges(years) {
+  const nums = years
+    .map(y => (typeof y === 'number' ? y : parseInt(String(y).trim(), 10)))
+    .filter(y => !isNaN(y));
+  const uniq = [...new Set(nums)].sort((a, b) => a - b);
+  const ranges = [];
+  let start = null, prev = null;
+  uniq.forEach(y => {
+    if (start === null) { start = y; prev = y; }
+    else if (y === prev + 1) { prev = y; }
+    else { ranges.push(start === prev ? String(start) : `${start}-${prev}`); start = y; prev = y; }
+  });
+  if (start !== null) ranges.push(start === prev ? String(start) : `${start}-${prev}`);
+  return ranges;
+}
+
+// "排量"字段实际含义就是 Engine，从第四步年份聚合开始，输出结果中一律改用 "Engine" 作为字段名
+function compatOutputFieldName(name) {
+  return name === '排量' ? 'Engine' : name;
+}
+
+document.getElementById('btn-aggregate-compat').addEventListener('click', () => {
+  const statusEl = document.getElementById('aggregate-status');
+  try {
+    const extraNames = state.compatSelectedExtra.map(c => c.name);
+    const keyFields = ['SKU', 'Make', 'Model', 'Series', ...extraNames]; // 不含 Year，按源字段名分组
+    const groups = new Map();
+    state.compatRows.forEach(r => {
+      const key = keyFields.map(f => String(r[f] === undefined || r[f] === null ? '' : r[f]).trim()).join('||');
+      if (!groups.has(key)) groups.set(key, { base: r, years: [] });
+      groups.get(key).years.push(r['Year']);
+    });
+    const output = [];
+    groups.forEach(g => {
+      const yearRanges = mergeYearsToRanges(g.years);
+      yearRanges.forEach(yr => {
+        const rowObj = {};
+        keyFields.forEach(f => { rowObj[compatOutputFieldName(f)] = g.base[f]; });
+        rowObj['Year'] = yr;
+        output.push(rowObj);
+      });
+    });
+    state.compatAggregatedRows = output;
+
+    statusEl.textContent = `聚合完成 ✓ 共 ${output.length} 行`;
+    statusEl.className = 'status-line ok';
+    renderCompatPreview();
+    document.getElementById('compat-preview-block').classList.remove('hidden');
+    document.getElementById('compat-preview-block').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '聚合失败：' + err.message;
+    statusEl.className = 'status-line err';
+  }
+});
+
+function renderCompatPreview() {
+  const summaryEl = document.getElementById('compat-summary-grid');
+  summaryEl.innerHTML = '';
+  [
+    ['兼容表原始行数', state.compatRows.length],
+    ['聚合后行数', state.compatAggregatedRows.length],
+    ['额外聚合字段数', state.compatSelectedExtra.length],
+  ].forEach(([label, n]) => {
+    const card = document.createElement('div');
+    card.className = 'summary-card';
+    card.innerHTML = `<div class="n">${n}</div><div class="l">${label}</div>`;
+    summaryEl.appendChild(card);
+  });
+
+  const cols = ['SKU', 'Make', 'Model', 'Series', ...state.compatSelectedExtra.map(c => compatOutputFieldName(c.name)), 'Year'];
+  const table = document.getElementById('compat-preview-table');
+  table.innerHTML = '';
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  cols.forEach(c => { const th = document.createElement('th'); th.textContent = c; trh.appendChild(th); });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  state.compatAggregatedRows.slice(0, 100).forEach(r => {
+    const tr = document.createElement('tr');
+    cols.forEach(c => { const td = document.createElement('td'); td.textContent = r[c] === undefined ? '' : r[c]; tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+}
+
+// ---------- 五：合并到"车型数据库" ----------
+document.getElementById('btn-merge-compat').addEventListener('click', () => {
+  const statusEl = document.getElementById('merge-status');
+  try {
+    mergeCompatIntoDatabase();
+    statusEl.textContent = `合并完成 ✓ 新增 ${state.compatMergedCount} 行，车型数据库共 ${state.outputRows.length} 行`;
+    statusEl.className = 'status-line ok';
+    renderResults();
+    document.getElementById('step3').classList.remove('hidden');
+    document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '合并失败：' + err.message;
+    statusEl.className = 'status-line err';
+  }
+});
+
+function mergeCompatIntoDatabase() {
+  if (!state.outputRows.length && !state.columnOrder.length) state.columnOrder = defaultColumnOrder();
+
+  // state.compatAggregatedRows 中的额外字段已在第四步聚合时按 compatOutputFieldName 改名（如 排量 -> Engine），
+  // 此处的额外字段名需与聚合结果的实际 key 保持一致
+  const extraNames = state.compatSelectedExtra.map(c => compatOutputFieldName(c.name));
+  state.compatMergeExtraNames = [...new Set([...state.compatMergeExtraNames, ...extraNames])];
+  state.compatDedupeFields = ['Make', 'Model', 'Series', ...extraNames]; // 查重不含 Product Code(SKU)、Year
+
+  // Part Name：沿用车型数据库中相同 Product Code 已有的 Part Name
+  const partNameByCode = {};
+  state.outputRows.forEach(r => {
+    if (!(r['Product Code'] in partNameByCode)) partNameByCode[r['Product Code']] = r['Part Name'];
+  });
+
+  let no = state.outputRows.reduce((m, r) => Math.max(m, Number(r['No']) || 0), 0);
+  const newRows = [];
+
+  state.compatAggregatedRows.forEach(agg => {
+    no++;
+    const ProductCode = String(agg['SKU'] === undefined ? '' : agg['SKU']).trim();
+    const make = agg['Make'] === undefined ? '' : String(agg['Make']).trim();
+    const model = agg['Model'] === undefined ? '' : String(agg['Model']).trim();
+    const series = agg['Series'] === undefined ? '' : String(agg['Series']).trim();
+    const year = agg['Year'];
+    const Status = '已上架';
+
+    let PartName = partNameByCode[ProductCode];
+    if (PartName === undefined) { PartName = ProductCode; state.warnings.unmatchedCompatPartName.add(ProductCode); }
+
+    const rm = state.regionMap[make];
+    if (!rm) state.warnings.unmatchedRegion.add(make);
+    const Region = rm ? rm.region : '';
+    const Brand = rm ? rm.brand : '';
+
+    const MakeModelSeriesYear = `${make} ${model} ${series} ${year}`;
+
+    let MakeModel;
+    if (make === 'BMW' || make === 'Mercedes Benz') {
+      const model2 = state.bmwBenzMap[`${make}||${model}`];
+      if (model2) { MakeModel = `${make} ${model2}`; }
+      else { MakeModel = `${make} ${model}`; state.warnings.unmatchedBMWBenz.add(`${make} ${model}`); }
+    } else {
+      MakeModel = `${make} ${model}`;
+    }
+
+    const ModelCount = 1;
+    const yearParts = String(year).split('-');
+    const StartYear = parseInt(yearParts[0], 10);
+    const EndYear = parseInt((yearParts[1] || yearParts[0]), 10);
+
+    let holdings = 0;
+    const matches = state.hyMap[MakeModel];
+    if (!matches) {
+      state.warnings.unmatchedHY.add(MakeModel);
+    } else if (!isNaN(StartYear) && !isNaN(EndYear)) {
+      matches.forEach(yrs => { for (let y = StartYear; y <= EndYear; y++) holdings += (Number(yrs[y]) || 0); });
+    }
+
+    const rowObj = {
+      'No': no, 'Product Code': ProductCode, 'Status': Status, 'Part Name': PartName,
+      'Region': Region, 'Brand': Brand, 'Make': make, 'Model': model, 'Series': series,
+      'Make Model Series Year': MakeModelSeriesYear, 'Note': '',
+      'OE No.': '', 'Factory No.': '', 'Make+Model': MakeModel,
+      'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, '保有量': holdings,
+      [DEDUPE_FIELD_NAME]: '',
+    };
+    extraNames.forEach(n => { rowObj[n] = agg[n]; });
+    newRows.push(rowObj);
+  });
+
+  // 已有行补齐新列，避免预览/导出缺列
+  state.outputRows.forEach(r => {
+    if (!(DEDUPE_FIELD_NAME in r)) r[DEDUPE_FIELD_NAME] = '';
+    state.compatMergeExtraNames.forEach(n => { if (!(n in r)) r[n] = ''; });
+  });
+
+  state.outputRows = state.outputRows.concat(newRows);
+  state.compatMerged = true;
+  state.compatMergedCount = newRows.length;
+
+  state.columnOrder = defaultColumnOrder();
+
+  runDuplicateDetection();
+}
+
+// ---------- 六：查重（后台自动处理） ----------
+function runDuplicateDetection() {
+  if (!state.compatDedupeFields.length) return;
+  const fields = state.compatDedupeFields;
+  const groups = new Map();
+  state.outputRows.forEach(r => {
+    const key = fields.map(f => String(r[f] === undefined || r[f] === null ? '' : r[f]).trim()).join('||');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+  let taggedCount = 0;
+  groups.forEach(rows => {
+    // 先清除本组旧标记，再按当前规则重新判断
+    if (rows.length < 2) { rows.forEach(r => { r[DEDUPE_FIELD_NAME] = ''; }); return; }
+    const statuses = new Set(rows.map(r => r['Status']));
+    const needTag = statuses.size > 1; // 已上架+AU开发 / 已上架+未AU / AU开发+未AU 均属于混合情况
+    const label = needTag ? `重复，${[...statuses].join('+')}` : '';
+    rows.forEach(r => { r[DEDUPE_FIELD_NAME] = label; });
+    if (needTag) taggedCount += rows.length;
+  });
+  state.compatDupeTaggedCount = taggedCount;
+}
+
+// ---------- results rendering ----------
+function renderResults() {
+  const summaryEl = document.getElementById('summary-grid');
+  const totalRows = state.wsReverse.rowCount - 2;
+  const outRows = state.outputRows.length;
+  const zeroHoldings = state.outputRows.filter(r => r['保有量'] === 0).length;
+  summaryEl.innerHTML = '';
+  const summaryCards = [
+    ['车型逆向总行数', totalRows],
+    ['车型数据库行数', outRows],
+    ['保有量为 0 的行', zeroHoldings],
+    ['追加字段数', state.selectedExtra.length],
+  ];
+  if (state.compatMerged) {
+    summaryCards.push(['兼容表合并新增行数', state.compatMergedCount]);
+    summaryCards.push(['查重标记行数', state.compatDupeTaggedCount || 0]);
+  }
+  summaryCards.forEach(([label, n]) => {
+    const card = document.createElement('div');
+    card.className = 'summary-card';
+    card.innerHTML = `<div class="n">${n}</div><div class="l">${label}</div>`;
+    summaryEl.appendChild(card);
+  });
+
+  const warnEl = document.getElementById('warn-container');
+  warnEl.innerHTML = '';
+  const w = state.warnings;
+  const warnList = [];
+  if (w.unmatchedRegion.size) warnList.push([`Make 在 Region-Brand-Make 辅助表中未匹配到（${w.unmatchedRegion.size} 个）`, [...w.unmatchedRegion]]);
+  if (w.unmatchedBMWBenz.size) warnList.push([`BMW / Mercedes Benz 车型在辅助表中未匹配到 Model2，已保留原 Model（${w.unmatchedBMWBenz.size} 个）`, [...w.unmatchedBMWBenz]]);
+  if (w.unmatchedHY.size) warnList.push([`Make+Model 在保有量表中未匹配到，保有量记为 0（${w.unmatchedHY.size} 个）`, [...w.unmatchedHY]]);
+  if (w.unmatchedPartName.size) warnList.push([`SPU 在 Part Name 辅助表中未匹配到，已直接使用 SPU 原值（${w.unmatchedPartName.size} 个）`, [...w.unmatchedPartName]]);
+  if (w.unmatchedCompatPartName.size) warnList.push([`以下来自兼容表合并的 Product Code，在车型数据库中未找到已有 Part Name，已直接使用 Product Code 原值（${w.unmatchedCompatPartName.size} 个）`, [...w.unmatchedCompatPartName]]);
+
+  if (warnList.length) {
+    const box = document.createElement('div');
+    box.className = 'warn-box';
+    box.innerHTML = '<strong>⚠ 以下情况需要你核对：</strong>';
+    warnList.forEach(([title, items]) => {
+      const p = document.createElement('div');
+      p.style.marginTop = '8px';
+      p.innerHTML = `<b>${title}</b>`;
+      const ul = document.createElement('ul');
+      items.slice(0, 15).forEach(it => { const li = document.createElement('li'); li.textContent = it; ul.appendChild(li); });
+      if (items.length > 15) { const li = document.createElement('li'); li.textContent = `... 还有 ${items.length - 15} 个`; ul.appendChild(li); }
+      p.appendChild(ul);
+      box.appendChild(p);
+    });
+    warnEl.appendChild(box);
+  }
+
+  renderColumnOrderPanel();
+  renderPreviewTable();
+
+  document.getElementById('assumptions-box').innerHTML = `
+    <strong>本工具的关键处理规则说明：</strong>
+    · "品牌号"与"OE"字段范围通过表头第1行（大标题）自动识别，本次识别为品牌号=[${state.brandCols.map(c=>state.headerRow2[c]).join('、')}]，OE=[${state.oeCols.map(c=>state.headerRow2[c]).join('、')}]<br>
+    · "#N/A"、空值统一视为空；品牌号/OE 列中的 "-" 也视为空（不计入 OE No.）<br>
+    · Make Model Series Year 中的 Year 直接取该行自身的 Year 值<br>
+    · 保有量按 Start Year–End Year 区间对"保有量"表中匹配到的 eBay Model_AU 行求和（如有多行匹配则一并累加）<br>
+    ${state.compatMerged ? `· 兼容表合并：新增行的 Part Name 取自车型数据库中相同 Product Code 已有的值；OE No./Factory No./Note 留空<br>
+    · 查重（第 6 步，自动执行）：按第三步所选字段中除 SKU、Year 外的字段（本次为 ${state.compatDedupeFields.join('、')}）对全表分组，同组内 Status 若同时出现"已上架"与"AU开发"/"未AU"，或同时出现"AU开发"与"未AU"，则标记为"重复，<出现过的 Status 用+连接>"（如"重复，未AU+已上架"），表格中以浅黄色底标出，导出文件同样着色<br>` : ''}
+  `;
+}
+
+// ---------- column order (drag to reorder, step 3) ----------
+function defaultColumnOrder() {
+  let cols = FIXED_FIELDS.concat(state.selectedExtra.map(c => c.name));
+  if (state.compatMerged) {
+    state.compatMergeExtraNames.forEach(n => { if (!cols.includes(n)) cols.push(n); });
+    if (!cols.includes(DEDUPE_FIELD_NAME)) cols.push(DEDUPE_FIELD_NAME);
+  }
+  return cols;
+}
+
+function renderPreviewTable() {
+  const cols = state.columnOrder;
+  const table = document.getElementById('preview-table');
+  table.innerHTML = '';
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  cols.forEach(c => { const th = document.createElement('th'); th.textContent = c; trh.appendChild(th); });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  state.outputRows.slice(0, 100).forEach(r => {
+    const tr = document.createElement('tr');
+    if (r[DEDUPE_FIELD_NAME]) tr.style.background = '#FFF6D9';
+    cols.forEach(c => { const td = document.createElement('td'); td.textContent = r[c] === undefined ? '' : r[c]; tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  const wrap = document.getElementById('preview-table').parentElement;
+  const existingNote = wrap.nextElementSibling;
+  if (existingNote && existingNote.classList && existingNote.classList.contains('preview-note')) existingNote.remove();
+  if (state.outputRows.length > 100) {
+    const note = document.createElement('div');
+    note.className = 'preview-note';
+    note.style.cssText = 'font-size:11.5px;color:var(--muted);padding:8px 4px;';
+    note.textContent = `仅预览前 100 行，导出文件包含全部 ${state.outputRows.length} 行`;
+    wrap.after(note);
+  }
+}
+
+function renderColumnOrderPanel() {
+  const el = document.getElementById('column-order-list');
+  el.innerHTML = '';
+  state.columnOrder.forEach(name => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.draggable = true;
+    chip.textContent = name;
+    chip.dataset.name = name;
+    chip.addEventListener('dragstart', () => { chip.classList.add('dragging'); });
+    chip.addEventListener('dragend', () => { chip.classList.remove('dragging'); });
+    el.appendChild(chip);
+  });
+}
+
+// 找到离鼠标当前位置最近的 chip，并判断应该插到它前面还是后面
+function getDragAfterElement(container, x, y) {
+  const els = [...container.querySelectorAll('.chip:not(.dragging)')];
+  let best = null, bestDist = Infinity;
+  els.forEach(elm => {
+    const box = elm.getBoundingClientRect();
+    const cx = box.left + box.width / 2;
+    const cy = box.top + box.height / 2;
+    const dist = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+    if (dist < bestDist) { bestDist = dist; best = { elm, box }; }
+  });
+  if (!best) return { element: null, before: false };
+  const before = x < best.box.left + best.box.width / 2;
+  return { element: best.elm, before };
+}
+
+// 容器级的拖拽监听只需要绑定一次
+(function wireColumnOrderContainer() {
+  const el = document.getElementById('column-order-list');
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    const draggingEl = el.querySelector('.dragging');
+    if (!draggingEl) return;
+    const { element, before } = getDragAfterElement(el, e.clientX, e.clientY);
+    if (!element || element === draggingEl) return;
+    if (before) el.insertBefore(draggingEl, element);
+    else el.insertBefore(draggingEl, element.nextSibling);
+  });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    state.columnOrder = [...el.querySelectorAll('.chip')].map(c => c.dataset.name);
+    renderPreviewTable();
+  });
+})();
+
+document.getElementById('btn-reset-order').addEventListener('click', () => {
+  state.columnOrder = defaultColumnOrder();
+  renderColumnOrderPanel();
+  renderPreviewTable();
+});
+
+// ---------- export ----------
+document.getElementById('btn-export').addEventListener('click', async () => {
+  const statusEl = document.getElementById('export-status');
+  statusEl.textContent = '生成 Excel 中...';
+  statusEl.className = 'status-line';
+  try {
+    const wb = new ExcelJS.Workbook();
+    const sheet = wb.addWorksheet('车型数据库', { views: [{ showGridLines: false }] });
+
+    const cols = state.columnOrder.length ? state.columnOrder : defaultColumnOrder();
+    sheet.columns = cols.map(c => ({ header: c, key: c, width: Math.max(10, Math.min(28, c.length * 1.8 + 4)) }));
+
+    state.outputRows.forEach(r => {
+      sheet.addRow(cols.map(c => (r[c] === undefined ? '' : r[c])));
+    });
+
+    const FONT_NAME = '微软雅黑';
+    const STANDARD_DARK_RED = 'FFC00000'; // Excel 标准色·深红
+    const THIN_BORDER = { style: 'thin', color: { argb: 'FF000000' } };
+    const ALL_BORDERS = { top: THIN_BORDER, left: THIN_BORDER, bottom: THIN_BORDER, right: THIN_BORDER };
+    const CENTER = { vertical: 'middle', horizontal: 'center' };
+
+    const headerRow = sheet.getRow(1);
+    headerRow.height = 20.5;
+    headerRow.eachCell({ includeEmpty: true }, cell => {
+      cell.font = { name: FONT_NAME, size: 9, color: { argb: 'FFFFFFFF' }, bold: true };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STANDARD_DARK_RED } };
+      cell.alignment = CENTER;
+      cell.border = ALL_BORDERS;
+    });
+    const dupeColIdx = cols.indexOf(DEDUPE_FIELD_NAME) + 1; // 0 表示未启用查重列
+    const DUPE_FILL = 'FFFFF0B3'; // 查重需核对：浅黄色底
+    for (let r = 2; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r);
+      row.height = 17.5;
+      const isDupe = dupeColIdx > 0 && !!cellDisplayValue(row.getCell(dupeColIdx));
+      row.eachCell({ includeEmpty: true }, cell => {
+        cell.font = { name: FONT_NAME, size: 9, color: { argb: 'FF000000' } };
+        cell.alignment = CENTER;
+        cell.border = ALL_BORDERS;
+        if (isDupe) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DUPE_FILL } };
+      });
+    }
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `OT表-车型数据库-${ts}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    statusEl.textContent = '导出完成 ✓（新文件仅含"车型数据库"表，避免破坏原 AU-OT 表中的图片/公式）';
+    statusEl.className = 'status-line ok';
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '导出失败：' + err.message;
+    statusEl.className = 'status-line err';
+  }
+});
+
+</script>
+</body>
+</html>
