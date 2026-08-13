@@ -490,20 +490,20 @@
     <div class="step-head">
       <div class="step-num">1</div>
       <div>
-        <h2>上传 AU-OT 表</h2>
+        <h2>上传 AU-车型逆向表</h2>
         <p>需包含"车型逆向"和"保有量"两个 Sheet；三张辅助表已内置，无需每次上传</p>
       </div>
     </div>
     <div class="step-body">
       <div class="subtab-row" id="step1-subtabs">
-        <button type="button" class="subtab active" id="subtab-auot">① 上传 AU-OT 表</button>
+        <button type="button" class="subtab active" id="subtab-auot">① 上传 AU-车型逆向表</button>
         <button type="button" class="subtab" id="subtab-compat">② 上传兼容表（可选）</button>
       </div>
 
       <div id="panel-auot">
       <div class="upload-grid" style="grid-template-columns:1fr;max-width:420px;">
         <label class="drop" id="drop-main">
-          <div class="label">AU-OT 表</div>
+          <div class="label">AU-车型逆向表</div>
           <div class="hint">含"车型逆向"+"保有量" Sheet 的 .xlsx 文件</div>
           <div class="fname" id="fname-main"></div>
           <input type="file" id="file-main" accept=".xlsx">
@@ -586,11 +586,11 @@
             <table class="preview" id="compat-preview-table"></table>
           </div>
           <div class="actions">
-            <button class="primary" id="btn-merge-compat">五、合并到车型数据库</button>
+            <button class="primary" id="btn-merge-compat">五、添加到车型数据库</button>
             <span class="status-line" id="merge-status"></span>
           </div>
           <div class="assumptions" style="margin-top:12px;">
-            合并为可选操作，非强制：如当前已生成"车型数据库"（第 3 步），会把聚合后的行追加进去，Part Name 取自车型数据库中相同 Product Code 已有的值，并对全表自动查重（第 6 步，后台处理，无需按钮）；如尚未生成车型数据库，也可直接合并，仅生成这些 SKU 的记录。
+            添加为可选操作，非强制：如当前已生成"车型数据库"（第 3 步），会把聚合后的行添加进去，Part Name 取自车型数据库中相同 Product Code 已有的值，并对全表自动查重（第 6 步，后台处理，无需按钮）；如尚未生成车型数据库，也可直接添加，仅生成这些 SKU 的记录。重复点击本按钮会用最新的聚合结果覆盖上一次添加的内容，不会重复累加。
           </div>
         </div>
       </div><!-- /panel-compat -->
@@ -950,7 +950,18 @@ document.getElementById('btn-parse').addEventListener('click', async () => {
       dynamicCols.push(c);
     }
     state.brandCols = dynamicCols.filter(c => groupLabel[c] && groupLabel[c].includes('品牌') && state.headerRow2[c]);
-    state.oeCols = dynamicCols.filter(c => groupLabel[c] && groupLabel[c].toUpperCase().includes('OE') && !groupLabel[c].includes('品牌'));
+    // OE 大标题下的识别方式参考"品牌号"：属于 OE 分组、且有小标题的列都算 OE 字段；
+    // 但一旦遇到小标题精确为 "OE Number" 的列，就在此处停止继续识别（避免因表头合并单元格的传播逻辑，
+    // 把 OE 分组之后其实并不属于 OE 的列也一并识别进来）
+    state.oeCols = [];
+    for (const c of dynamicCols) {
+      const grp = groupLabel[c];
+      if (!grp || !grp.toUpperCase().includes('OE') || grp.includes('品牌')) continue;
+      const sub = state.headerRow2[c];
+      if (!sub || String(sub).trim() === '') continue;
+      state.oeCols.push(c);
+      if (String(sub).trim().toUpperCase() === 'OE NUMBER') break;
+    }
 
     log(`已识别"品牌号"字段（${state.brandCols.length}个）：${state.brandCols.map(c => state.headerRow2[c]).join('、') || '无'}`);
     log(`已识别"OE"字段（${state.oeCols.length}个）：${state.oeCols.map(c => state.headerRow2[c]).join('、') || '无'}`);
@@ -1459,14 +1470,14 @@ document.getElementById('btn-merge-compat').addEventListener('click', () => {
   const statusEl = document.getElementById('merge-status');
   try {
     mergeCompatIntoDatabase();
-    statusEl.textContent = `合并完成 ✓ 新增 ${state.compatMergedCount} 行，车型数据库共 ${state.outputRows.length} 行`;
+    statusEl.textContent = `添加完成 ✓ 本次添加 ${state.compatMergedCount} 行，车型数据库共 ${state.outputRows.length} 行`;
     statusEl.className = 'status-line ok';
     renderResults();
     document.getElementById('step3').classList.remove('hidden');
     document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     console.error(err);
-    statusEl.textContent = '合并失败：' + err.message;
+    statusEl.textContent = '添加失败：' + err.message;
     statusEl.className = 'status-line err';
   }
 });
@@ -1474,10 +1485,14 @@ document.getElementById('btn-merge-compat').addEventListener('click', () => {
 function mergeCompatIntoDatabase() {
   if (!state.outputRows.length && !state.columnOrder.length) state.columnOrder = defaultColumnOrder();
 
+  // 移除上一次"添加到车型数据库"产生的行，避免重复点击时反复累加同一批数据
+  state.outputRows = state.outputRows.filter(r => !r.__compatAdded);
+  state.warnings.unmatchedCompatPartName.clear();
+
   // state.compatAggregatedRows 中的额外字段已在第四步聚合时按 compatOutputFieldName 改名（如 排量 -> Engine），
   // 此处的额外字段名需与聚合结果的实际 key 保持一致
   const extraNames = state.compatSelectedExtra.map(c => compatOutputFieldName(c.name));
-  state.compatMergeExtraNames = [...new Set([...state.compatMergeExtraNames, ...extraNames])];
+  state.compatMergeExtraNames = extraNames; // 以本次选择为准，不与历史累加
   state.compatDedupeFields = ['Make', 'Model', 'Series', ...extraNames]; // 查重不含 Product Code(SKU)、Year
 
   // Part Name：沿用车型数据库中相同 Product Code 已有的 Part Name
@@ -1539,6 +1554,8 @@ function mergeCompatIntoDatabase() {
       [DEDUPE_FIELD_NAME]: '',
     };
     extraNames.forEach(n => { rowObj[n] = agg[n]; });
+    // 标记该行来自兼容表添加，供下次点击时识别并整体替换（不参与导出/预览的列遍历，因此设为不可枚举）
+    Object.defineProperty(rowObj, '__compatAdded', { value: true, enumerable: false });
     newRows.push(rowObj);
   });
 
@@ -1747,11 +1764,23 @@ document.getElementById('btn-export').addEventListener('click', async () => {
   statusEl.textContent = '生成 Excel 中...';
   statusEl.className = 'status-line';
   try {
-    const wb = new ExcelJS.Workbook();
+    const wb = state.mainWB || new ExcelJS.Workbook();
+    // 如果已存在旧的"车型数据库"Sheet（例如重复导出），先移除，避免出现同名重复表；
+    // 其余原有 Sheet（车型逆向、保有量及其它用户表中自带的 Sheet）保持不变一并导出
+    const existingSheet = wb.getWorksheet('车型数据库');
+    if (existingSheet) wb.removeWorksheet(existingSheet.id);
     const sheet = wb.addWorksheet('车型数据库', { views: [{ showGridLines: false }] });
 
     const cols = state.columnOrder.length ? state.columnOrder : defaultColumnOrder();
-    sheet.columns = cols.map(c => ({ header: c, key: c, width: Math.max(10, Math.min(28, c.length * 1.8 + 4)) }));
+    const columnWidthFor = (name) => {
+      if (name === 'No') return 5.5;
+      if (name === 'Product Code' || name === 'Part Name' || name === 'Factory No.') return 15;
+      if (name === 'Model Count') return 12;
+      if (name === 'Make Model Series Year') return 22;
+      if (name === 'OE No.' || name === 'Make+Model') return 15;
+      return 9;
+    };
+    sheet.columns = cols.map(c => ({ header: c, key: c, width: columnWidthFor(c) }));
 
     state.outputRows.forEach(r => {
       sheet.addRow(cols.map(c => (r[c] === undefined ? '' : r[c])));
@@ -1762,9 +1791,13 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     const THIN_BORDER = { style: 'thin', color: { argb: 'FF000000' } };
     const ALL_BORDERS = { top: THIN_BORDER, left: THIN_BORDER, bottom: THIN_BORDER, right: THIN_BORDER };
     const CENTER = { vertical: 'middle', horizontal: 'center' };
+    const CENTER_SHRINK = { vertical: 'middle', horizontal: 'center', shrinkToFit: true };
+    const ROW_HEIGHT = 17;
+    const oeColIdx = cols.indexOf('OE No.') + 1; // 0 表示未出现该列
+    const noteColIdx = cols.indexOf('Note') + 1; // 0 表示未出现该列
 
     const headerRow = sheet.getRow(1);
-    headerRow.height = 20.5;
+    headerRow.height = ROW_HEIGHT;
     headerRow.eachCell({ includeEmpty: true }, cell => {
       cell.font = { name: FONT_NAME, size: 9, color: { argb: 'FFFFFFFF' }, bold: true };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STANDARD_DARK_RED } };
@@ -1775,11 +1808,11 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     const DUPE_FILL = 'FFFFF0B3'; // 查重需核对：浅黄色底
     for (let r = 2; r <= sheet.rowCount; r++) {
       const row = sheet.getRow(r);
-      row.height = 17.5;
+      row.height = ROW_HEIGHT;
       const isDupe = dupeColIdx > 0 && !!cellDisplayValue(row.getCell(dupeColIdx));
-      row.eachCell({ includeEmpty: true }, cell => {
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         cell.font = { name: FONT_NAME, size: 9, color: { argb: 'FF000000' } };
-        cell.alignment = CENTER;
+        cell.alignment = (colNumber === oeColIdx || colNumber === noteColIdx) ? CENTER_SHRINK : CENTER;
         cell.border = ALL_BORDERS;
         if (isDupe) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DUPE_FILL } };
       });
@@ -1797,7 +1830,9 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    statusEl.textContent = '导出完成 ✓（新文件仅含"车型数据库"表，避免破坏原 AU-OT 表中的图片/公式）';
+    statusEl.textContent = state.mainWB
+      ? '导出完成 ✓（已保留车型逆向表中的所有原有 Sheet，并新增/替换了"车型数据库"Sheet）'
+      : '导出完成 ✓（未检测到已解析的 AU-车型逆向表，仅导出"车型数据库"表）';
     statusEl.className = 'status-line ok';
   } catch (err) {
     console.error(err);
