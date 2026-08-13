@@ -669,7 +669,7 @@
     <div class="step-head">
       <div class="step-num">1</div>
       <div>
-        <h2>上传车型数据库表</h2>
+        <h2>上传车型数据库</h2>
         <p>需包含"车型数据库"Sheet 的 .xlsx 文件（可以是刚才导出的文件，也可以是其它来源、只要含有相同字段结构的文件）</p>
       </div>
     </div>
@@ -794,6 +794,7 @@ const state = {
   prodSelectedExtra: [],   // 用户选中的额外字段
   prodOutputRows: [],      // 生成的产品数据库行（按 SKU 聚合）
   prodColumnOrder: [],     // 产品数据库导出/预览字段顺序
+  prodHyMap: null,         // 从上传的车型数据库工作簿中一并解析出的"保有量"表（用于按合并后的年份区间计算 VIO，避免重复计数）
 };
 
 const COMPAT_FIXED_FIELDS = ['SKU', 'Make', 'Model', 'Series', 'Year'];
@@ -802,23 +803,53 @@ const DEDUPE_FIELD_NAME = '查重标记';
 const PROD_SOURCE_FIXED_FIELDS = new Set([
   'No', 'Product Code', 'Status', 'Part Name', '供应商代码', '供应商SKU', 'Region', 'Brand',
   'Make', 'Model', 'Series', 'Make Model Series Year', 'Make+Model',
-  'Model Count', 'Start Year', 'End Year', '保有量', DEDUPE_FIELD_NAME
+  'Model Count', 'Start Year', 'End Year', 'VIO', DEDUPE_FIELD_NAME
 ]);
 const PROD_FIXED_OUTPUT_FIELDS = [
   'No', 'Part Name', 'SKU', '状态', '供应商代码', '供应商SKU', 'Region', 'Brand', 'Make',
-  '车型合并', '车型数量', 'OE No', '保有量', '保有量区间'
+  '车型合并', '车型数量', 'OE No', 'VIO', 'VIO Range'
 ];
 
 const FIXED_FIELDS = [
   'No','Product Code','Status','Part Name','Region','Brand','Make','Model','Series',
   'Make Model Series Year','Note','OE No.','供应商代码','供应商SKU','Make+Model',
-  'Model Count','Start Year','End Year','保有量'
+  'Model Count','Start Year','End Year','VIO'
 ];
 
 const BASE_FIELD_NAMES = ['序号','SPU','Make','Model','Series','Year','Engine','发动机型号','功率','车型查重','备注'];
 const SP_FIELD_NAMES = ['YT辨识号','供应商SKU','供应商代码','PTSKU','查重结果'];
 
 // ---------- generic helpers ----------
+function parseHoldingsSheet(wsHoldings) {
+  // 保有量表字段（含"eBay Model_AU"和各年份列）位于第 3 行，数据从第 4 行开始
+  const hyHeaderRow = wsHoldings.getRow(3);
+  const hyMaxCol = wsHoldings.columnCount;
+  let colModelAU = -1;
+  const yearCols = {};
+  for (let c = 1; c <= hyMaxCol; c++) {
+    const h = cellDisplayValue(hyHeaderRow.getCell(c));
+    if (h === 'eBay Model_AU') colModelAU = c;
+    if (typeof h === 'number' && h >= 1990 && h <= 2100) yearCols[h] = c;
+  }
+  if (colModelAU < 0) throw new Error('保有量表中找不到"eBay Model_AU"字段');
+  const hyMap = {};
+  wsHoldings.eachRow((row, rowNumber) => {
+    if (rowNumber < 4) return;
+    const modelAU = cellDisplayValue(row.getCell(colModelAU));
+    if (!modelAU) return;
+    const years = {};
+    Object.keys(yearCols).forEach(y => { years[y] = cellDisplayValue(row.getCell(yearCols[y])) || 0; });
+    if (!hyMap[modelAU]) hyMap[modelAU] = [];
+    hyMap[modelAU].push(years);
+  });
+  const yearKeys = Object.keys(yearCols).map(Number);
+  return {
+    hyMap,
+    yearCount: yearKeys.length,
+    yearMin: yearKeys.length ? Math.min(...yearKeys) : '',
+    yearMax: yearKeys.length ? Math.max(...yearKeys) : '',
+  };
+}
 function cellDisplayValue(cell) {
   if (!cell) return '';
   let v = cell.value;
@@ -1122,27 +1153,9 @@ document.getElementById('btn-parse').addEventListener('click', async () => {
     state.selectedExtra = [];
 
     // 保有量 sheet
-    const hyRow1 = wsHoldings.getRow(1);
-    const hyMaxCol = wsHoldings.columnCount;
-    let colModelAU = -1;
-    const yearCols = {};
-    for (let c = 1; c <= hyMaxCol; c++) {
-      const h = cellDisplayValue(hyRow1.getCell(c));
-      if (h === 'eBay Model_AU') colModelAU = c;
-      if (typeof h === 'number' && h >= 1990 && h <= 2100) yearCols[h] = c;
-    }
-    if (colModelAU < 0) throw new Error('保有量表中找不到"eBay Model_AU"字段');
-    state.hyMap = {};
-    wsHoldings.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
-      const modelAU = cellDisplayValue(row.getCell(colModelAU));
-      if (!modelAU) return;
-      const years = {};
-      Object.keys(yearCols).forEach(y => { years[y] = cellDisplayValue(row.getCell(yearCols[y])) || 0; });
-      if (!state.hyMap[modelAU]) state.hyMap[modelAU] = [];
-      state.hyMap[modelAU].push(years);
-    });
-    log(`保有量表：识别年份列 ${Object.keys(yearCols).length} 个（${Math.min(...Object.keys(yearCols).map(Number))}–${Math.max(...Object.keys(yearCols).map(Number))}）`);
+    const hy1 = parseHoldingsSheet(wsHoldings);
+    state.hyMap = hy1.hyMap;
+    log(`保有量表：识别年份列 ${hy1.yearCount} 个（${hy1.yearMin}–${hy1.yearMax}）`);
 
     let willInclude = 0;
     wsReverse.eachRow((row, rowNumber) => {
@@ -1353,7 +1366,7 @@ function generateOutput() {
       'Region': Region, 'Brand': Brand, 'Make': make, 'Model': model, 'Series': series,
       'Make Model Series Year': MakeModelSeriesYear, 'Note': Note,
       'OE No.': OENo, '供应商代码': SupplierCode, '供应商SKU': SupplierSKU, 'Make+Model': MakeModel,
-      'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, '保有量': holdings
+      'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, 'VIO': holdings
     };
     state.selectedExtra.forEach(col => {
       rowObj[col.name] = cellDisplayValue(row.getCell(col.idx));
@@ -1690,7 +1703,7 @@ function mergeCompatIntoDatabase() {
       'Region': Region, 'Brand': Brand, 'Make': make, 'Model': model, 'Series': series,
       'Make Model Series Year': MakeModelSeriesYear, 'Note': '',
       'OE No.': '', '供应商代码': '', '供应商SKU': '', 'Make+Model': MakeModel,
-      'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, '保有量': holdings,
+      'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, 'VIO': holdings,
       [DEDUPE_FIELD_NAME]: '',
     };
     extraNames.forEach(n => { rowObj[n] = agg[n]; });
@@ -1742,12 +1755,12 @@ function renderResults() {
   const summaryEl = document.getElementById('summary-grid');
   const totalRows = state.wsReverse.rowCount - 2;
   const outRows = state.outputRows.length;
-  const zeroHoldings = state.outputRows.filter(r => r['保有量'] === 0).length;
+  const zeroHoldings = state.outputRows.filter(r => r['VIO'] === 0).length;
   summaryEl.innerHTML = '';
   const summaryCards = [
     ['车型逆向总行数', totalRows],
     ['车型数据库行数', outRows],
-    ['保有量为 0 的行', zeroHoldings],
+    ['VIO 为 0 的行', zeroHoldings],
     ['追加字段数', state.selectedExtra.length],
   ];
   if (state.compatMerged) {
@@ -1767,7 +1780,7 @@ function renderResults() {
   const warnList = [];
   if (w.unmatchedRegion.size) warnList.push([`Make 在 Region-Brand-Make 辅助表中未匹配到（${w.unmatchedRegion.size} 个）`, [...w.unmatchedRegion]]);
   if (w.unmatchedBMWBenz.size) warnList.push([`BMW / Mercedes Benz 车型在辅助表中未匹配到 Model2，已保留原 Model（${w.unmatchedBMWBenz.size} 个）`, [...w.unmatchedBMWBenz]]);
-  if (w.unmatchedHY.size) warnList.push([`Make+Model 在保有量表中未匹配到，保有量记为 0（${w.unmatchedHY.size} 个）`, [...w.unmatchedHY]]);
+  if (w.unmatchedHY.size) warnList.push([`Make+Model 在保有量表中未匹配到，VIO 记为 0（${w.unmatchedHY.size} 个）`, [...w.unmatchedHY]]);
   if (w.unmatchedPartName.size) warnList.push([`SPU 在 Part Name 辅助表中未匹配到，已直接使用 SPU 原值（${w.unmatchedPartName.size} 个）`, [...w.unmatchedPartName]]);
   if (w.unmatchedCompatPartName.size) warnList.push([`以下来自兼容表合并的 Product Code，在车型数据库中未找到已有 Part Name，已直接使用 Product Code 原值（${w.unmatchedCompatPartName.size} 个）`, [...w.unmatchedCompatPartName]]);
 
@@ -1796,7 +1809,7 @@ function renderResults() {
     · "品牌号"与"OE"字段范围通过表头第1行（大标题）自动识别，本次识别为品牌号=[${state.brandCols.map(c=>state.headerRow2[c]).join('、')}]，OE=[${state.oeCols.map(c=>state.headerRow2[c]).join('、')}]<br>
     · "#N/A"、空值统一视为空；品牌号/OE 列中的 "-" 也视为空（不计入 OE No.）<br>
     · Make Model Series Year 中的 Year 直接取该行自身的 Year 值<br>
-    · 保有量按 Start Year–End Year 区间对"保有量"表中匹配到的 eBay Model_AU 行求和（如有多行匹配则一并累加）<br>
+    · VIO 按 Start Year–End Year 区间对"保有量"表中匹配到的 eBay Model_AU 行求和（如有多行匹配则一并累加）<br>
     ${state.compatMerged ? `· 兼容表合并：新增行的 Part Name 取自车型数据库中相同 Product Code 已有的值；OE No./供应商代码/供应商SKU/Note 留空<br>
     · 查重（第 6 步，自动执行）：按第三步所选字段中除 SKU、Year 外的字段（本次为 ${state.compatDedupeFields.join('、')}）对全表分组，同组内 Status 若同时出现"已上架"与"AU开发"/"未AU"，或同时出现"AU开发"与"未AU"，则标记为"重复，<出现过的 Status 用+连接>"（如"重复，未AU+已上架"），表格中以浅黄色底标出，导出文件同样着色<br>` : ''}
   `;
@@ -2028,6 +2041,24 @@ document.getElementById('btn-parse-prod').addEventListener('click', async () => 
     state.prodExtraCols = headers.filter(h => !PROD_SOURCE_FIXED_FIELDS.has(h.name));
     state.prodSelectedExtra = [];
 
+    // 同一工作簿里如果还带着"保有量"Sheet（例如本工具导出的车型数据库文件），一并解析出来，
+    // 用于第三步按合并后的车型年份区间重新计算 VIO，避免同车型多条年份区间重叠导致重复计数。
+    // 若没有找到或解析失败，VIO 一律记为 0（不允许退化为按行直接求和，避免重复计数导致数值虚高）
+    const wsHoldingsProd = wb.getWorksheet('保有量');
+    if (wsHoldingsProd) {
+      try {
+        const hy = parseHoldingsSheet(wsHoldingsProd);
+        state.prodHyMap = hy.hyMap;
+        log2(`同时识别到"保有量"Sheet：年份列 ${hy.yearCount} 个（${hy.yearMin}–${hy.yearMax}），VIO 将按合并后的车型年份区间重新计算`);
+      } catch (hyErr) {
+        state.prodHyMap = null;
+        log2(`"保有量"Sheet 解析失败（${hyErr.message}），VIO 将统一记为 0`);
+      }
+    } else {
+      state.prodHyMap = null;
+      log2('未在文件中找到"保有量"Sheet，VIO 将统一记为 0');
+    }
+
     log2(`已识别字段（${headers.length}个）：${headers.map(h => h.name).join('、')}`);
     log2(`车型数据库数据行数：${rows.length}`);
     statusEl.textContent = `解析完成 ✓ 共 ${rows.length} 行`;
@@ -2151,22 +2182,25 @@ function generateProductDatabase() {
   const output = [];
   let no = 0;
   order.forEach(sku => {
-    no++;
     const rows = groups.get(sku);
     const first = rows[0];
 
     // Part Name/状态/供应商代码/供应商SKU：与 SPU 一样，同一 SKU 下每行应相同，取第一行的值
     const PartName = first['Part Name'] === undefined ? '' : first['Part Name'];
-    const StatusV = first['Status'] === undefined ? '' : first['Status'];
+    const StatusV = first['Status'] === undefined ? '' : String(first['Status']).trim();
     const SupplierCode = first['供应商代码'] === undefined ? '' : first['供应商代码'];
     const SupplierSKU = first['供应商SKU'] === undefined ? '' : first['供应商SKU'];
+
+    // 只保留 Status 为"未AU"或"AU开发"的 SKU，其余（如"已上架"）不进入产品数据库
+    if (StatusV !== '未AU' && StatusV !== 'AU开发') return;
+    no++;
 
     const regionSet = new Set();
     const brandSet = new Set();
     const makeSet = new Set();
     const oeSet = new Set();
     const vehicleLines = new Set();
-    let holdingsSum = 0;
+    const modelYearRange = new Map(); // Make+Model -> {min, max}，用于合并同车型的重叠/相邻年份区间
 
     rows.forEach(r => {
       if (!isEmptyGeneric(r['Region'])) regionSet.add(String(r['Region']).trim());
@@ -2185,9 +2219,34 @@ function generateProductDatabase() {
         vehicleLines.add(line);
       }
 
-      const hy = Number(r['保有量']);
-      if (!isNaN(hy)) holdingsSum += hy;
+      // 先按 Make+Model 做车型去重，同一车型的多条年份区间合并为最小-最大，
+      // 避免同车型重叠的年份区间在直接求和时被重复统计
+      if (!isEmptyGeneric(r['Make+Model'])) {
+        const mm = String(r['Make+Model']).trim();
+        const sy = Number(r['Start Year']);
+        const ey = Number(r['End Year']);
+        if (!isNaN(sy) && !isNaN(ey)) {
+          if (!modelYearRange.has(mm)) modelYearRange.set(mm, { min: sy, max: ey });
+          else {
+            const cur = modelYearRange.get(mm);
+            cur.min = Math.min(cur.min, sy);
+            cur.max = Math.max(cur.max, ey);
+          }
+        }
+      }
     });
+
+    let holdingsSum = 0;
+    if (state.prodHyMap) {
+      modelYearRange.forEach((range, mm) => {
+        const matches = state.prodHyMap[mm];
+        if (!matches) return;
+        matches.forEach(yrs => {
+          for (let y = range.min; y <= range.max; y++) holdingsSum += (Number(yrs[y]) || 0);
+        });
+      });
+    }
+    // 没有可用的"保有量"表时，VIO 统一记为 0，不做按行直接求和的退化处理（避免同车型年份区间重叠导致重复计数）
 
     const vehicleArr = naturalSort([...vehicleLines]);
 
@@ -2200,8 +2259,8 @@ function generateProductDatabase() {
       '车型合并': vehicleArr.join('\n'),
       '车型数量': vehicleArr.length,
       'OE No': [...oeSet].join(';'),
-      '保有量': holdingsSum,
-      '保有量区间': holdingsRangeLabel(holdingsSum),
+      'VIO': holdingsSum,
+      'VIO Range': holdingsRangeLabel(holdingsSum),
     };
 
     state.prodSelectedExtra.forEach(col => {
@@ -2241,6 +2300,7 @@ function renderProdResults() {
     ['车型数据库总行数', state.prodRows.length],
     ['产品数据库行数（去重后 SKU 数）', state.prodOutputRows.length],
     ['追加字段数', state.prodSelectedExtra.length],
+    ['VIO 计算方式', state.prodHyMap ? '按合并年份区间精确计算' : '未找到保有量表，VIO 统一为 0'],
   ].forEach(([label, n]) => {
     const card = document.createElement('div');
     card.className = 'summary-card';
