@@ -477,7 +477,7 @@
 </header>
 
 <nav class="sheets">
-  <div class="tab active">车型数据库</div>
+  <div class="tab active" id="tab-vehicle">车型数据库</div>
   <div class="tab" id="tab-product">产品数据库</div>
   <div class="tab" id="tab-coverage">车型覆盖率</div>
   <div class="tab" id="tab-invest">投资模型</div>
@@ -485,6 +485,7 @@
 
 <main>
 
+<div id="page-vehicle">
   <!-- STEP 1 -->
   <section class="step">
     <div class="step-head">
@@ -660,6 +661,84 @@
     </div>
   </section>
 
+</div><!-- /page-vehicle -->
+
+<div id="page-product" class="hidden">
+  <!-- PRODUCT STEP 1 -->
+  <section class="step">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div>
+        <h2>上传车型数据库表</h2>
+        <p>需包含"车型数据库"Sheet 的 .xlsx 文件（可以是刚才导出的文件，也可以是其它来源、只要含有相同字段结构的文件）</p>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="upload-grid" style="grid-template-columns:1fr;max-width:420px;">
+        <label class="drop" id="drop-prod">
+          <div class="label">车型数据库表</div>
+          <div class="hint">含"车型数据库" Sheet 的 .xlsx 文件</div>
+          <div class="fname" id="fname-prod"></div>
+          <input type="file" id="file-prod" accept=".xlsx">
+        </label>
+      </div>
+      <div class="actions">
+        <button class="primary" id="btn-parse-prod" disabled>解析文件</button>
+        <span class="status-line" id="parse-prod-status"></span>
+      </div>
+      <pre class="log hidden" id="parse-prod-log"></pre>
+
+      <div id="prod-fields-block" class="hidden" style="margin-top:20px;">
+        <h3 style="font-size:12.5px;color:var(--muted);margin:0 0 8px;font-weight:600;">选择要追加的字段（可选）</h3>
+        <div class="field-panels">
+          <div class="field-panel">
+            <h3>车型数据库其余字段（拖到右侧追加）</h3>
+            <div class="field-list" id="prod-available-fields"></div>
+          </div>
+          <div class="field-panel">
+            <h3>追加到产品数据库末尾的字段</h3>
+            <div class="field-list" id="prod-selected-fields"></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="btn-generate-prod">生成产品数据库</button>
+          <span class="status-line" id="generate-prod-status"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUCT STEP 2 -->
+  <section class="step hidden" id="step5">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div>
+        <h2>预览与导出</h2>
+        <p>按 SKU 聚合，核对结果后导出（会在车型数据库右侧新增"产品数据库"Sheet）</p>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="summary-grid" id="prod-summary-grid"></div>
+
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <h3 style="font-size:12.5px;color:var(--muted);margin:0;font-weight:600;">字段顺序（拖动调整，实时影响下方预览和导出）</h3>
+          <span class="toggle-link" id="btn-reset-order-prod">恢复默认顺序</span>
+        </div>
+        <div class="field-list" id="prod-column-order"></div>
+      </div>
+
+      <div class="actions" style="margin-top:0;margin-bottom:16px;">
+        <button class="primary" id="btn-export-prod">导出 Excel</button>
+        <span class="status-line" id="export-prod-status"></span>
+      </div>
+      <div class="preview-wrap">
+        <table class="preview" id="prod-preview-table"></table>
+      </div>
+    </div>
+  </section>
+</div><!-- /page-product -->
+
 </main>
 
 <script>
@@ -705,19 +784,39 @@ const state = {
   compatMergeExtraNames: [], // 已合并进车型数据库的额外字段名（用于维持列顺序/恢复默认顺序）
   compatDedupeFields: [],  // 查重使用的字段（车型数据库列名，不含 Year）
   compatMergedCount: 0,
+
+  // ---- 产品数据库 相关状态 ----
+  prodFile: null,
+  prodWB: null,            // 已解析的车型数据库工作簿（导出时在其中新增"产品数据库"Sheet）
+  prodHeaders: [],         // [{idx, name}] 车型数据库表头字段
+  prodRows: [],            // 解析出的车型数据库数据行
+  prodExtraCols: [],       // 除固定字段外，可选的额外字段
+  prodSelectedExtra: [],   // 用户选中的额外字段
+  prodOutputRows: [],      // 生成的产品数据库行（按 SKU 聚合）
+  prodColumnOrder: [],     // 产品数据库导出/预览字段顺序
 };
 
 const COMPAT_FIXED_FIELDS = ['SKU', 'Make', 'Model', 'Series', 'Year'];
 const DEDUPE_FIELD_NAME = '查重标记';
 
+const PROD_SOURCE_FIXED_FIELDS = new Set([
+  'No', 'Product Code', 'Status', 'Part Name', '供应商代码', '供应商SKU', 'Region', 'Brand',
+  'Make', 'Model', 'Series', 'Make Model Series Year', 'Make+Model',
+  'Model Count', 'Start Year', 'End Year', '保有量', DEDUPE_FIELD_NAME
+]);
+const PROD_FIXED_OUTPUT_FIELDS = [
+  'No', 'Part Name', 'SKU', '状态', '供应商代码', '供应商SKU', 'Region', 'Brand', 'Make',
+  '车型合并', '车型数量', 'OE No', '保有量', '保有量区间'
+];
+
 const FIXED_FIELDS = [
   'No','Product Code','Status','Part Name','Region','Brand','Make','Model','Series',
-  'Make Model Series Year','Note','OE No.','Factory No.','Make+Model',
+  'Make Model Series Year','Note','OE No.','供应商代码','供应商SKU','Make+Model',
   'Model Count','Start Year','End Year','保有量'
 ];
 
 const BASE_FIELD_NAMES = ['序号','SPU','Make','Model','Series','Year','Engine','发动机型号','功率','车型查重','备注'];
-const SP_FIELD_NAMES = ['YT辨识号','工厂编号','PTSKU','查重结果'];
+const SP_FIELD_NAMES = ['YT辨识号','供应商SKU','供应商代码','PTSKU','查重结果'];
 
 // ---------- generic helpers ----------
 function cellDisplayValue(cell) {
@@ -791,8 +890,22 @@ document.getElementById('subtab-compat').addEventListener('click', () => {
   document.getElementById('panel-auot').classList.add('hidden');
 });
 
+// ---------- 顶部导航：车型数据库 / 产品数据库 页面切换 ----------
+document.getElementById('tab-vehicle').addEventListener('click', () => {
+  document.getElementById('tab-vehicle').classList.add('active');
+  document.getElementById('tab-product').classList.remove('active');
+  document.getElementById('page-vehicle').classList.remove('hidden');
+  document.getElementById('page-product').classList.add('hidden');
+});
+document.getElementById('tab-product').addEventListener('click', () => {
+  document.getElementById('tab-product').classList.add('active');
+  document.getElementById('tab-vehicle').classList.remove('active');
+  document.getElementById('page-product').classList.remove('hidden');
+  document.getElementById('page-vehicle').classList.add('hidden');
+});
+
 // coming-soon tabs
-['tab-product','tab-coverage','tab-invest'].forEach(id => {
+['tab-coverage','tab-invest'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
     alert('该 Sheet 暂未开放，敬请期待后续更新。');
   });
@@ -842,6 +955,31 @@ wireDropZone('drop-part', 'file-part', 'fname-part', 'part');
   const btn = document.getElementById('btn-parse-compat');
   function setFile(f) {
     state.compatFile = f;
+    fname.textContent = f.name;
+    drop.classList.add('filled');
+    btn.disabled = false;
+  }
+  input.addEventListener('change', () => { if (input.files && input.files[0]) setFile(input.files[0]); });
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--au-blue)'; });
+  drop.addEventListener('dragleave', () => { drop.style.borderColor = ''; });
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.style.borderColor = '';
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      input.files = e.dataTransfer.files;
+      setFile(e.dataTransfer.files[0]);
+    }
+  });
+})();
+
+// ---------- 产品数据库：车型数据库表 drop zone ----------
+(function wireProdDropZone() {
+  const drop = document.getElementById('drop-prod');
+  const input = document.getElementById('file-prod');
+  const fname = document.getElementById('fname-prod');
+  const btn = document.getElementById('btn-parse-prod');
+  function setFile(f) {
+    state.prodFile = f;
     fname.textContent = f.name;
     drop.classList.add('filled');
     btn.disabled = false;
@@ -924,14 +1062,14 @@ document.getElementById('btn-parse').addEventListener('click', async () => {
 
     const fixedIdx = {};
     ['序号','SPU','Make','Model','Series','Year','Engine','发动机型号','功率','车型查重','备注',
-     'YT辨识号','工厂编号','PTSKU','查重结果'].forEach(n => { fixedIdx[n] = findColByName(n); });
+     'YT辨识号','供应商SKU','供应商代码','PTSKU','查重结果'].forEach(n => { fixedIdx[n] = findColByName(n); });
     state.fixedColIdx = fixedIdx;
 
     if (fixedIdx['Make'] < 0 || fixedIdx['Model'] < 0 || fixedIdx['Series'] < 0 || fixedIdx['Year'] < 0) {
       throw new Error('车型逆向表缺少 Make/Model/Series/Year 中的必要字段，请检查表头（第2行）');
     }
-    if (fixedIdx['工厂编号'] < 0 && fixedIdx['PTSKU'] < 0) {
-      throw new Error('车型逆向表缺少"工厂编号"和"PTSKU"字段，无法筛选车型数据库的行');
+    if (fixedIdx['供应商SKU'] < 0 && fixedIdx['PTSKU'] < 0) {
+      throw new Error('车型逆向表缺少"供应商SKU"和"PTSKU"字段，无法筛选车型数据库的行');
     }
 
     let endBase = -1;
@@ -970,7 +1108,7 @@ document.getElementById('btn-parse').addEventListener('click', async () => {
     // 注意：Engine 已从固定字段中移除，因此现在也作为可拖拽的额外字段出现
     const consumed = new Set([
       fixedIdx['序号'], fixedIdx['SPU'], fixedIdx['Make'], fixedIdx['Model'], fixedIdx['Series'],
-      fixedIdx['Year'], fixedIdx['备注'], fixedIdx['工厂编号'], fixedIdx['PTSKU'],
+      fixedIdx['Year'], fixedIdx['备注'], fixedIdx['供应商SKU'], fixedIdx['供应商代码'], fixedIdx['PTSKU'],
       fixedIdx['查重结果'], fixedIdx['车型查重'],
       ...state.brandCols, ...state.oeCols
     ]);
@@ -1009,11 +1147,11 @@ document.getElementById('btn-parse').addEventListener('click', async () => {
     let willInclude = 0;
     wsReverse.eachRow((row, rowNumber) => {
       if (rowNumber < 3) return;
-      const f = fixedIdx['工厂编号'] > 0 ? cellDisplayValue(row.getCell(fixedIdx['工厂编号'])) : '';
+      const f = fixedIdx['供应商SKU'] > 0 ? cellDisplayValue(row.getCell(fixedIdx['供应商SKU'])) : '';
       const p = fixedIdx['PTSKU'] > 0 ? cellDisplayValue(row.getCell(fixedIdx['PTSKU'])) : '';
       if (!isEmptyGeneric(f) || !isEmptyGeneric(p)) willInclude++;
     });
-    log(`车型逆向表总行数：${wsReverse.rowCount - 2}，其中工厂编号/PTSKU 有值的行：${willInclude}`);
+    log(`车型逆向表总行数：${wsReverse.rowCount - 2}，其中供应商SKU/PTSKU 有值的行：${willInclude}`);
 
     statusEl.textContent = `解析完成 ✓ 共 ${willInclude} 行将进入车型数据库`;
     statusEl.className = 'status-line ok';
@@ -1142,9 +1280,10 @@ function generateOutput() {
 
   ws.eachRow((row, rowNumber) => {
     if (rowNumber < 3) return;
-    const factoryRaw = fx['工厂编号'] > 0 ? cellDisplayValue(row.getCell(fx['工厂编号'])) : '';
+    const supplierSkuRaw = fx['供应商SKU'] > 0 ? cellDisplayValue(row.getCell(fx['供应商SKU'])) : '';
+    const supplierCodeRaw = fx['供应商代码'] > 0 ? cellDisplayValue(row.getCell(fx['供应商代码'])) : '';
     const ptskuRaw = fx['PTSKU'] > 0 ? cellDisplayValue(row.getCell(fx['PTSKU'])) : '';
-    if (isEmptyGeneric(factoryRaw) && isEmptyGeneric(ptskuRaw)) return;
+    if (isEmptyGeneric(supplierSkuRaw) && isEmptyGeneric(ptskuRaw)) return;
 
     no++;
     const make = fx['Make'] > 0 ? cellDisplayValue(row.getCell(fx['Make'])) : '';
@@ -1155,8 +1294,8 @@ function generateOutput() {
     const spu = fx['SPU'] > 0 ? cellDisplayValue(row.getCell(fx['SPU'])) : '';
     const statusRaw = fx['查重结果'] > 0 ? cellDisplayValue(row.getCell(fx['查重结果'])) : '';
 
-    // Product Code (原 SKU) = PTSKU 优先，无则用工厂编号
-    const ProductCode = !isEmptyGeneric(ptskuRaw) ? String(ptskuRaw).trim() : String(factoryRaw).trim();
+    // Product Code (原 SKU) = PTSKU 优先，无则用供应商SKU
+    const ProductCode = !isEmptyGeneric(ptskuRaw) ? String(ptskuRaw).trim() : String(supplierSkuRaw).trim();
     const Status = isEmptyGeneric(statusRaw) ? '' : String(statusRaw).trim();
 
     let PartName = state.partNameMap[spu];
@@ -1181,7 +1320,8 @@ function generateOutput() {
     });
     const OENo = oeParts.join(';');
 
-    const FactoryNo = isEmptyGeneric(factoryRaw) ? '' : String(factoryRaw).trim();
+    const SupplierSKU = isEmptyGeneric(supplierSkuRaw) ? '' : String(supplierSkuRaw).trim();
+    const SupplierCode = isEmptyGeneric(supplierCodeRaw) ? '' : String(supplierCodeRaw).trim();
 
     let MakeModel;
     if (make === 'BMW' || make === 'Mercedes Benz') {
@@ -1212,7 +1352,7 @@ function generateOutput() {
       'No': no, 'Product Code': ProductCode, 'Status': Status, 'Part Name': PartName,
       'Region': Region, 'Brand': Brand, 'Make': make, 'Model': model, 'Series': series,
       'Make Model Series Year': MakeModelSeriesYear, 'Note': Note,
-      'OE No.': OENo, 'Factory No.': FactoryNo, 'Make+Model': MakeModel,
+      'OE No.': OENo, '供应商代码': SupplierCode, '供应商SKU': SupplierSKU, 'Make+Model': MakeModel,
       'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, '保有量': holdings
     };
     state.selectedExtra.forEach(col => {
@@ -1549,7 +1689,7 @@ function mergeCompatIntoDatabase() {
       'No': no, 'Product Code': ProductCode, 'Status': Status, 'Part Name': PartName,
       'Region': Region, 'Brand': Brand, 'Make': make, 'Model': model, 'Series': series,
       'Make Model Series Year': MakeModelSeriesYear, 'Note': '',
-      'OE No.': '', 'Factory No.': '', 'Make+Model': MakeModel,
+      'OE No.': '', '供应商代码': '', '供应商SKU': '', 'Make+Model': MakeModel,
       'Model Count': ModelCount, 'Start Year': StartYear, 'End Year': EndYear, '保有量': holdings,
       [DEDUPE_FIELD_NAME]: '',
     };
@@ -1657,7 +1797,7 @@ function renderResults() {
     · "#N/A"、空值统一视为空；品牌号/OE 列中的 "-" 也视为空（不计入 OE No.）<br>
     · Make Model Series Year 中的 Year 直接取该行自身的 Year 值<br>
     · 保有量按 Start Year–End Year 区间对"保有量"表中匹配到的 eBay Model_AU 行求和（如有多行匹配则一并累加）<br>
-    ${state.compatMerged ? `· 兼容表合并：新增行的 Part Name 取自车型数据库中相同 Product Code 已有的值；OE No./Factory No./Note 留空<br>
+    ${state.compatMerged ? `· 兼容表合并：新增行的 Part Name 取自车型数据库中相同 Product Code 已有的值；OE No./供应商代码/供应商SKU/Note 留空<br>
     · 查重（第 6 步，自动执行）：按第三步所选字段中除 SKU、Year 外的字段（本次为 ${state.compatDedupeFields.join('、')}）对全表分组，同组内 Status 若同时出现"已上架"与"AU开发"/"未AU"，或同时出现"AU开发"与"未AU"，则标记为"重复，<出现过的 Status 用+连接>"（如"重复，未AU+已上架"），表格中以浅黄色底标出，导出文件同样着色<br>` : ''}
   `;
 }
@@ -1774,7 +1914,7 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     const cols = state.columnOrder.length ? state.columnOrder : defaultColumnOrder();
     const columnWidthFor = (name) => {
       if (name === 'No') return 5.5;
-      if (name === 'Product Code' || name === 'Part Name' || name === 'Factory No.') return 15;
+      if (name === 'Product Code' || name === 'Part Name') return 15;
       if (name === 'Model Count') return 12;
       if (name === 'Make Model Series Year') return 22;
       if (name === 'OE No.' || name === 'Make+Model') return 15;
@@ -1833,6 +1973,410 @@ document.getElementById('btn-export').addEventListener('click', async () => {
     statusEl.textContent = state.mainWB
       ? '导出完成 ✓（已保留车型逆向表中的所有原有 Sheet，并新增/替换了"车型数据库"Sheet）'
       : '导出完成 ✓（未检测到已解析的 AU-车型逆向表，仅导出"车型数据库"表）';
+    statusEl.className = 'status-line ok';
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '导出失败：' + err.message;
+    statusEl.className = 'status-line err';
+  }
+});
+
+// ============================================================
+// 产品数据库：基于"车型数据库"表，按 SKU（Product Code）聚合
+// ============================================================
+
+// ---------- 一、读表：解析用户上传的车型数据库表 ----------
+document.getElementById('btn-parse-prod').addEventListener('click', async () => {
+  const statusEl = document.getElementById('parse-prod-status');
+  const logEl = document.getElementById('parse-prod-log');
+  logEl.textContent = '';
+  logEl.classList.remove('hidden');
+  statusEl.textContent = '解析中...';
+  statusEl.className = 'status-line';
+  try {
+    const wb = await loadWorkbookFromFile(state.prodFile);
+    const sheet = wb.getWorksheet('车型数据库');
+    if (!sheet) throw new Error('文件中找不到名为"车型数据库"的 Sheet');
+    state.prodWB = wb;
+
+    const headerRow = sheet.getRow(1);
+    const maxCol = sheet.columnCount;
+    const headers = [];
+    for (let c = 1; c <= maxCol; c++) {
+      const name = cellDisplayValue(headerRow.getCell(c));
+      if (name && String(name).trim() !== '') headers.push({ idx: c, name: String(name).trim() });
+    }
+    if (!headers.some(h => h.name === 'Product Code')) {
+      throw new Error('车型数据库表中找不到"Product Code"字段，无法生成产品数据库');
+    }
+
+    const rows = [];
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const obj = {};
+      let hasAny = false;
+      headers.forEach(h => {
+        const v = cellDisplayValue(row.getCell(h.idx));
+        obj[h.name] = v;
+        if (!isEmptyGeneric(v)) hasAny = true;
+      });
+      if (hasAny) rows.push(obj);
+    });
+
+    state.prodHeaders = headers;
+    state.prodRows = rows;
+    state.prodExtraCols = headers.filter(h => !PROD_SOURCE_FIXED_FIELDS.has(h.name));
+    state.prodSelectedExtra = [];
+
+    log2(`已识别字段（${headers.length}个）：${headers.map(h => h.name).join('、')}`);
+    log2(`车型数据库数据行数：${rows.length}`);
+    statusEl.textContent = `解析完成 ✓ 共 ${rows.length} 行`;
+    statusEl.className = 'status-line ok';
+
+    renderProdFieldPanels();
+    document.getElementById('prod-fields-block').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '解析失败：' + err.message;
+    statusEl.className = 'status-line err';
+    log2('错误：' + err.message);
+  }
+
+  function log2(msg) {
+    logEl.textContent += msg + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+});
+
+// ---------- 字段选择（拖拽，追加字段可选） ----------
+function renderProdFieldPanels() {
+  renderProdAvailable();
+  renderProdSelected();
+}
+function renderProdAvailable() {
+  const el = document.getElementById('prod-available-fields');
+  el.innerHTML = '';
+  state.prodExtraCols
+    .filter(c => !state.prodSelectedExtra.some(s => s.idx === c.idx))
+    .forEach(c => el.appendChild(makeProdChip(c, false)));
+  wireProdDropTarget(el, 'available');
+}
+function renderProdSelected() {
+  const el = document.getElementById('prod-selected-fields');
+  el.innerHTML = '';
+  if (state.prodSelectedExtra.length === 0) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:12px;color:var(--muted);padding:6px;';
+    hint.textContent = '（可选）把左侧字段拖到这里，将作为追加字段出现在产品数据库末尾；若拖入"Engine"，还会与"车型合并"字段做拼接';
+    el.appendChild(hint);
+  }
+  state.prodSelectedExtra.forEach(c => el.appendChild(makeProdChip(c, true)));
+  wireProdDropTarget(el, 'selected');
+}
+function makeProdChip(col, removable) {
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.draggable = true;
+  chip.dataset.idx = col.idx;
+  const label = document.createElement('span');
+  label.textContent = col.name;
+  chip.appendChild(label);
+  if (removable) {
+    const x = document.createElement('span');
+    x.className = 'x';
+    x.textContent = '×';
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.prodSelectedExtra = state.prodSelectedExtra.filter(s => s.idx !== col.idx);
+      renderProdAvailable(); renderProdSelected();
+    });
+    chip.appendChild(x);
+  }
+  chip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', String(col.idx)); });
+  return chip;
+}
+function wireProdDropTarget(el, zone) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('dragover');
+    const idx = Number(e.dataTransfer.getData('text/plain'));
+    if (!idx) return;
+    if (zone === 'selected') {
+      if (!state.prodSelectedExtra.some(s => s.idx === idx)) {
+        const col = state.prodExtraCols.find(c => c.idx === idx);
+        if (col) state.prodSelectedExtra.push(col);
+      }
+    } else {
+      state.prodSelectedExtra = state.prodSelectedExtra.filter(s => s.idx !== idx);
+    }
+    renderProdAvailable(); renderProdSelected();
+  });
+}
+
+// ---------- 三、车型聚合：按 SKU 生成产品数据库 ----------
+function naturalSort(arr) {
+  return arr.slice().sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function holdingsRangeLabel(n) {
+  const x = Number(n) || 0;
+  if (x < 100000) return '0-10万';
+  if (x < 300000) return '10万-30万';
+  if (x < 500000) return '30万-50万';
+  if (x < 1000000) return '50万-100万';
+  if (x < 1500000) return '100万-150万';
+  if (x < 2000000) return '150万-200万';
+  return '大于200万';
+}
+
+function defaultProdColumnOrder() {
+  return PROD_FIXED_OUTPUT_FIELDS.concat(state.prodSelectedExtra.map(c => c.name));
+}
+
+function generateProductDatabase() {
+  const hasEngineExtra = state.prodSelectedExtra.some(c => c.name === 'Engine');
+
+  // 按 Product Code 去重分组，保留首次出现的顺序
+  const order = [];
+  const groups = new Map();
+  state.prodRows.forEach(r => {
+    const sku = isEmptyGeneric(r['Product Code']) ? '' : String(r['Product Code']).trim();
+    if (sku === '') return;
+    if (!groups.has(sku)) { groups.set(sku, []); order.push(sku); }
+    groups.get(sku).push(r);
+  });
+
+  const output = [];
+  let no = 0;
+  order.forEach(sku => {
+    no++;
+    const rows = groups.get(sku);
+    const first = rows[0];
+
+    // Part Name/状态/供应商代码/供应商SKU：与 SPU 一样，同一 SKU 下每行应相同，取第一行的值
+    const PartName = first['Part Name'] === undefined ? '' : first['Part Name'];
+    const StatusV = first['Status'] === undefined ? '' : first['Status'];
+    const SupplierCode = first['供应商代码'] === undefined ? '' : first['供应商代码'];
+    const SupplierSKU = first['供应商SKU'] === undefined ? '' : first['供应商SKU'];
+
+    const regionSet = new Set();
+    const brandSet = new Set();
+    const makeSet = new Set();
+    const oeSet = new Set();
+    const vehicleLines = new Set();
+    let holdingsSum = 0;
+
+    rows.forEach(r => {
+      if (!isEmptyGeneric(r['Region'])) regionSet.add(String(r['Region']).trim());
+      if (!isEmptyGeneric(r['Brand'])) brandSet.add(String(r['Brand']).trim());
+      if (!isEmptyGeneric(r['Make'])) makeSet.add(String(r['Make']).trim());
+
+      if (!isEmptyGeneric(r['OE No.'])) {
+        String(r['OE No.']).split(';').map(s => s.trim()).filter(s => s !== '').forEach(s => oeSet.add(s));
+      }
+
+      if (!isEmptyGeneric(r['Make Model Series Year'])) {
+        let line = String(r['Make Model Series Year']).trim();
+        if (hasEngineExtra && !isEmptyGeneric(r['Engine'])) {
+          line = `${line}, ${String(r['Engine']).trim()}`;
+        }
+        vehicleLines.add(line);
+      }
+
+      const hy = Number(r['保有量']);
+      if (!isNaN(hy)) holdingsSum += hy;
+    });
+
+    const vehicleArr = naturalSort([...vehicleLines]);
+
+    const rowObj = {
+      'No': no, 'Part Name': PartName, 'SKU': sku, '状态': StatusV,
+      '供应商代码': SupplierCode, '供应商SKU': SupplierSKU,
+      'Region': naturalSort([...regionSet]).join('/'),
+      'Brand': naturalSort([...brandSet]).join('/'),
+      'Make': naturalSort([...makeSet]).join('/'),
+      '车型合并': vehicleArr.join('\n'),
+      '车型数量': vehicleArr.length,
+      'OE No': [...oeSet].join(';'),
+      '保有量': holdingsSum,
+      '保有量区间': holdingsRangeLabel(holdingsSum),
+    };
+
+    state.prodSelectedExtra.forEach(col => {
+      const valSet = new Set();
+      rows.forEach(r => { if (!isEmptyGeneric(r[col.name])) valSet.add(String(r[col.name]).trim()); });
+      rowObj[col.name] = naturalSort([...valSet]).join(', ');
+    });
+
+    output.push(rowObj);
+  });
+
+  state.prodOutputRows = output;
+}
+
+document.getElementById('btn-generate-prod').addEventListener('click', () => {
+  const statusEl = document.getElementById('generate-prod-status');
+  try {
+    generateProductDatabase();
+    state.prodColumnOrder = defaultProdColumnOrder();
+    statusEl.textContent = `生成完成 ✓ 共 ${state.prodOutputRows.length} 个 SKU`;
+    statusEl.className = 'status-line ok';
+    renderProdResults();
+    document.getElementById('step5').classList.remove('hidden');
+    document.getElementById('step5').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '生成失败：' + err.message;
+    statusEl.className = 'status-line err';
+  }
+});
+
+// ---------- 预览 / 字段顺序 / 导出 ----------
+function renderProdResults() {
+  const summaryEl = document.getElementById('prod-summary-grid');
+  summaryEl.innerHTML = '';
+  [
+    ['车型数据库总行数', state.prodRows.length],
+    ['产品数据库行数（去重后 SKU 数）', state.prodOutputRows.length],
+    ['追加字段数', state.prodSelectedExtra.length],
+  ].forEach(([label, n]) => {
+    const card = document.createElement('div');
+    card.className = 'summary-card';
+    card.innerHTML = `<div class="n">${n}</div><div class="l">${label}</div>`;
+    summaryEl.appendChild(card);
+  });
+  renderProdColumnOrderPanel();
+  renderProdPreviewTable();
+}
+
+function renderProdPreviewTable() {
+  const cols = state.prodColumnOrder.length ? state.prodColumnOrder : defaultProdColumnOrder();
+  const table = document.getElementById('prod-preview-table');
+  table.innerHTML = '';
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  cols.forEach(c => { const th = document.createElement('th'); th.textContent = c; trh.appendChild(th); });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  state.prodOutputRows.slice(0, 100).forEach(r => {
+    const tr = document.createElement('tr');
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      const v = r[c] === undefined ? '' : r[c];
+      td.textContent = v;
+      if (c === '车型合并') td.style.cssText = 'white-space:pre-line;text-align:left;max-width:320px;';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+}
+
+function renderProdColumnOrderPanel() {
+  const el = document.getElementById('prod-column-order');
+  el.innerHTML = '';
+  state.prodColumnOrder.forEach(name => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.draggable = true;
+    chip.textContent = name;
+    chip.dataset.name = name;
+    chip.addEventListener('dragstart', () => { chip.classList.add('dragging'); });
+    chip.addEventListener('dragend', () => { chip.classList.remove('dragging'); });
+    el.appendChild(chip);
+  });
+}
+
+(function wireProdColumnOrderContainer() {
+  const el = document.getElementById('prod-column-order');
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    const draggingEl = el.querySelector('.dragging');
+    if (!draggingEl) return;
+    const { element, before } = getDragAfterElement(el, e.clientX, e.clientY);
+    if (!element || element === draggingEl) return;
+    if (before) el.insertBefore(draggingEl, element);
+    else el.insertBefore(draggingEl, element.nextSibling);
+  });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    state.prodColumnOrder = [...el.querySelectorAll('.chip')].map(c => c.dataset.name);
+    renderProdPreviewTable();
+  });
+})();
+
+document.getElementById('btn-reset-order-prod').addEventListener('click', () => {
+  state.prodColumnOrder = defaultProdColumnOrder();
+  renderProdColumnOrderPanel();
+  renderProdPreviewTable();
+});
+
+document.getElementById('btn-export-prod').addEventListener('click', async () => {
+  const statusEl = document.getElementById('export-prod-status');
+  try {
+    const wb = state.prodWB;
+    if (!wb) throw new Error('未找到已解析的车型数据库工作簿，请先在第 1 步解析文件');
+
+    // 若已存在旧的"产品数据库"Sheet（例如重复导出），先移除；其余原有 Sheet（含"车型数据库"）保持不变。
+    // 新增的 Sheet 默认追加在工作簿末尾，只要"车型数据库"当前是最后一个 Sheet，就会自然排在它右边。
+    const existing = wb.getWorksheet('产品数据库');
+    if (existing) wb.removeWorksheet(existing.id);
+    const sheet = wb.addWorksheet('产品数据库', { views: [{ showGridLines: false }] });
+
+    const cols = state.prodColumnOrder.length ? state.prodColumnOrder : defaultProdColumnOrder();
+    const prodColumnWidthFor = (name) => {
+      if (name === 'No') return 5.5;
+      if (name === 'SKU' || name === 'Part Name' || name === '供应商代码' || name === '供应商SKU') return 15;
+      if (name === '车型合并') return 42;
+      if (name === 'OE No') return 24;
+      return 10;
+    };
+    sheet.columns = cols.map(c => ({ header: c, key: c, width: prodColumnWidthFor(c) }));
+    state.prodOutputRows.forEach(r => {
+      sheet.addRow(cols.map(c => (r[c] === undefined ? '' : r[c])));
+    });
+
+    const FONT_NAME = '微软雅黑';
+    const STANDARD_DARK_RED = 'FFC00000';
+    const THIN_BORDER = { style: 'thin', color: { argb: 'FF000000' } };
+    const ALL_BORDERS = { top: THIN_BORDER, left: THIN_BORDER, bottom: THIN_BORDER, right: THIN_BORDER };
+    const CENTER = { vertical: 'middle', horizontal: 'center' };
+    const WRAP = { vertical: 'middle', horizontal: 'left', wrapText: true };
+    const mergeColIdx = cols.indexOf('车型合并') + 1; // 0 表示未出现该列
+
+    const headerRow = sheet.getRow(1);
+    headerRow.height = 17;
+    headerRow.eachCell({ includeEmpty: true }, cell => {
+      cell.font = { name: FONT_NAME, size: 9, color: { argb: 'FFFFFFFF' }, bold: true };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STANDARD_DARK_RED } };
+      cell.alignment = CENTER;
+      cell.border = ALL_BORDERS;
+    });
+    for (let r = 2; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r);
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        cell.font = { name: FONT_NAME, size: 9, color: { argb: 'FF000000' } };
+        cell.alignment = (colNumber === mergeColIdx) ? WRAP : CENTER;
+        cell.border = ALL_BORDERS;
+      });
+    }
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `OT表-产品数据库-${ts}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    statusEl.textContent = '导出完成 ✓（已在车型数据库右侧新增/替换"产品数据库"Sheet）';
     statusEl.className = 'status-line ok';
   } catch (err) {
     console.error(err);
