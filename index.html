@@ -591,7 +591,7 @@
             <span class="status-line" id="merge-status"></span>
           </div>
           <div class="assumptions" style="margin-top:12px;">
-            添加为可选操作，非强制：如当前已生成"车型数据库"（第 3 步），会把聚合后的行添加进去，Part Name 取自车型数据库中相同 Product Code 已有的值，并对全表自动查重（第 6 步，后台处理，无需按钮）；如尚未生成车型数据库，也可直接添加，仅生成这些 SKU 的记录。重复点击本按钮会用最新的聚合结果覆盖上一次添加的内容，不会重复累加。
+            添加为可选操作，非强制：如当前已生成"车型数据库"（第 3 步），会把聚合后的行添加进去；若当前车型数据库的 Part Name 是统一的单一值（如都为同一个品类），新增行的 Part Name 会统一填成该值，否则按相同 Product Code 匹配已有值；并对全表自动查重（第 6 步，后台处理，无需按钮）；如尚未生成车型数据库，也可直接添加，仅生成这些 SKU 的记录。重复点击本按钮会用最新的聚合结果覆盖上一次添加的内容，不会重复累加。
           </div>
         </div>
       </div><!-- /panel-compat -->
@@ -873,6 +873,12 @@ function isEmptyGeneric(v) {
 function isEmptyDash(v) {
   if (isEmptyGeneric(v)) return true;
   return String(v).trim() === '-';
+}
+// 年份字段规范化：单一年份（不含"-"）在拼接到 Make Model Series Year 时补成 "YYYY-YYYY"
+function normalizeYearRange(y) {
+  const s = isEmptyGeneric(y) ? '' : String(y).trim();
+  if (s === '') return s;
+  return s.includes('-') ? s : `${s}-${s}`;
 }
 function log(msg) {
   const el = document.getElementById('parse-log');
@@ -1319,7 +1325,7 @@ function generateOutput() {
     const Region = rm ? rm.region : '';
     const Brand = rm ? rm.brand : '';
 
-    const MakeModelSeriesYear = `${make} ${model} ${series} ${year}`;
+    const MakeModelSeriesYear = `${make} ${model} ${series} ${normalizeYearRange(year)}`;
     const Note = isEmptyGeneric(noteRaw) ? '' : String(noteRaw).trim();
 
     const oeParts = [];
@@ -1648,7 +1654,16 @@ function mergeCompatIntoDatabase() {
   state.compatMergeExtraNames = extraNames; // 以本次选择为准，不与历史累加
   state.compatDedupeFields = ['Make', 'Model', 'Series', ...extraNames]; // 查重不含 Product Code(SKU)、Year
 
-  // Part Name：沿用车型数据库中相同 Product Code 已有的 Part Name
+  // Part Name：若当前车型数据库中已有 Part Name 是统一的单一值（如都为 "Condenser"），
+  // 则兼容表新增的这些行统一填充为该值；否则退回按相同 Product Code 匹配已有 Part Name
+  const existingPartNames = new Set(
+    state.outputRows
+      .map(r => r['Part Name'])
+      .filter(v => !isEmptyGeneric(v))
+      .map(v => String(v).trim())
+  );
+  const uniformPartName = existingPartNames.size === 1 ? [...existingPartNames][0] : null;
+
   const partNameByCode = {};
   state.outputRows.forEach(r => {
     if (!(r['Product Code'] in partNameByCode)) partNameByCode[r['Product Code']] = r['Part Name'];
@@ -1666,15 +1681,20 @@ function mergeCompatIntoDatabase() {
     const year = agg['Year'];
     const Status = '已上架';
 
-    let PartName = partNameByCode[ProductCode];
-    if (PartName === undefined) { PartName = ProductCode; state.warnings.unmatchedCompatPartName.add(ProductCode); }
+    let PartName;
+    if (uniformPartName !== null) {
+      PartName = uniformPartName;
+    } else {
+      PartName = partNameByCode[ProductCode];
+      if (PartName === undefined) { PartName = ProductCode; state.warnings.unmatchedCompatPartName.add(ProductCode); }
+    }
 
     const rm = state.regionMap[make];
     if (!rm) state.warnings.unmatchedRegion.add(make);
     const Region = rm ? rm.region : '';
     const Brand = rm ? rm.brand : '';
 
-    const MakeModelSeriesYear = `${make} ${model} ${series} ${year}`;
+    const MakeModelSeriesYear = `${make} ${model} ${series} ${normalizeYearRange(year)}`;
 
     let MakeModel;
     if (make === 'BMW' || make === 'Mercedes Benz') {
@@ -1810,7 +1830,7 @@ function renderResults() {
     · "#N/A"、空值统一视为空；品牌号/OE 列中的 "-" 也视为空（不计入 OE No.）<br>
     · Make Model Series Year 中的 Year 直接取该行自身的 Year 值<br>
     · VIO 按 Start Year–End Year 区间对"保有量"表中匹配到的 eBay Model_AU 行求和（如有多行匹配则一并累加）<br>
-    ${state.compatMerged ? `· 兼容表合并：新增行的 Part Name 取自车型数据库中相同 Product Code 已有的值；OE No./供应商代码/供应商SKU/Note 留空<br>
+    ${state.compatMerged ? `· 兼容表合并：新增行的 Part Name 若车型数据库中原有 Part Name 是统一的单一值则直接沿用，否则按相同 Product Code 匹配已有值；OE No./供应商代码/供应商SKU/Note 留空<br>
     · 查重（第 6 步，自动执行）：按第三步所选字段中除 SKU、Year 外的字段（本次为 ${state.compatDedupeFields.join('、')}）对全表分组，同组内 Status 若同时出现"已上架"与"AU开发"/"未AU"，或同时出现"AU开发"与"未AU"，则标记为"重复，<出现过的 Status 用+连接>"（如"重复，未AU+已上架"），表格中以浅黄色底标出，导出文件同样着色<br>` : ''}
   `;
 }
